@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Octoporty.Agent/Octoporty.Agent.csproj" />
+    <Project Path="src/Octoporty.Gateway/Octoporty.Gateway.csproj" />
+    <Project Path="src/Octoporty.Shared/Octoporty.Shared.csproj" />
+  </Folder>
+</Solution>

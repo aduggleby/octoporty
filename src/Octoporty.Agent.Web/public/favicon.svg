@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="12" fill="#0a0f14"/>
+  <g stroke="#22d3ee" stroke-width="2" stroke-linecap="round">
+    <!-- Octopus body -->
+    <circle cx="32" cy="24" r="10" fill="#0a0f14"/>
+    <!-- Tentacles representing ports -->
+    <path d="M22 30 L14 44 L18 46" opacity="0.8"/>
+    <path d="M26 32 L20 50 L24 52" opacity="0.9"/>
+    <path d="M32 34 L32 52 L36 54"/>
+    <path d="M38 32 L44 50 L40 52" opacity="0.9"/>
+    <path d="M42 30 L50 44 L46 46" opacity="0.8"/>
+    <!-- Port indicators -->
+    <circle cx="14" cy="44" r="2" fill="#22d3ee"/>
+    <circle cx="20" cy="50" r="2" fill="#22d3ee"/>
+    <circle cx="32" cy="52" r="2" fill="#22d3ee"/>
+    <circle cx="44" cy="50" r="2" fill="#22d3ee"/>
+    <circle cx="50" cy="44" r="2" fill="#22d3ee"/>
+    <!-- Eye -->
+    <circle cx="32" cy="22" r="3" fill="#22d3ee"/>
+  </g>
+</svg>

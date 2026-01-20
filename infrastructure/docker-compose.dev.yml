@@ -1,0 +1,81 @@
+# Development docker-compose for local testing
+# Usage: docker compose -f docker-compose.dev.yml up --build
+
+services:
+  gateway:
+    build:
+      context: ../src
+      dockerfile: Octoporty.Gateway/Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      - Gateway__ApiKey=dev-api-key-change-in-production
+      - Gateway__CaddyAdminUrl=http://caddy:2019
+      - Logging__LogLevel=Debug
+    depends_on:
+      - caddy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2019:2019"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # SQL Server for Agent development
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=Dev_Password123!
+      - MSSQL_PID=Developer
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "Dev_Password123!" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Agent for local development (optional - can also run from IDE)
+  agent:
+    build:
+      context: ../src
+      dockerfile: Octoporty.Agent/Dockerfile
+    ports:
+      - "5001:8080"
+    environment:
+      - Agent__GatewayUrl=ws://gateway:8080/tunnel
+      - Agent__ApiKey=dev-api-key-change-in-production
+      - Agent__JwtSecret=dev-jwt-secret-minimum-32-characters-long
+      - Agent__Auth__Username=admin
+      - Agent__Auth__Password=admin
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=Octoporty;User Id=sa;Password=Dev_Password123!;TrustServerCertificate=true
+      - Logging__LogLevel=Debug
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:
+  sqlserver_data:
+
+networks:
+  default:
+    name: octoporty-dev

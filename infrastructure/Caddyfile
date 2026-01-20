@@ -1,0 +1,32 @@
+# Octoporty Edge Proxy Configuration
+# This Caddyfile serves as the base configuration.
+# Dynamic routes are added via Caddy's admin API by the Gateway.
+
+{
+	# Global options
+	admin :2019
+
+	# Enable automatic HTTPS
+	email {$ACME_EMAIL:admin@example.com}
+
+	# Use Let's Encrypt staging for testing
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# Health check endpoint for the edge proxy itself
+:80 {
+	respond /health "OK" 200
+
+	# Default response for unconfigured routes
+	respond "No tunnel configured for this host" 503
+}
+
+# Catch-all for HTTPS requests to unconfigured hosts
+:443 {
+	tls {
+		on_demand
+	}
+
+	respond /health "OK" 200
+	respond "No tunnel configured for this host" 503
+}

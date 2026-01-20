@@ -1,0 +1,45 @@
+using FastEndpoints;
+using Octoporty.Agent.Data;
+
+namespace Octoporty.Agent.Features.Mappings;
+
+public class DeleteMappingRequest
+{
+    public Guid Id { get; set; }
+}
+
+public class DeleteMappingEndpoint : Endpoint<DeleteMappingRequest>
+{
+    private readonly OctoportyDbContext _db;
+    private readonly ILogger<DeleteMappingEndpoint> _logger;
+
+    public DeleteMappingEndpoint(OctoportyDbContext db, ILogger<DeleteMappingEndpoint> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
+
+    public override void Configure()
+    {
+        Delete("/api/mappings/{id}");
+        AllowAnonymous();
+    }
+
+    public override async Task HandleAsync(DeleteMappingRequest req, CancellationToken ct)
+    {
+        var mapping = await _db.PortMappings.FindAsync([req.Id], ct);
+
+        if (mapping is null)
+        {
+            await Send.NotFoundAsync(ct);
+            return;
+        }
+
+        _db.PortMappings.Remove(mapping);
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Deleted port mapping {Id} for {Domain}", mapping.Id, mapping.ExternalDomain);
+
+        await Send.NoContentAsync(ct);
+    }
+}

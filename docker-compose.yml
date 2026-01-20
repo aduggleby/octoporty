@@ -1,0 +1,43 @@
+services:
+  agent:
+    build:
+      context: ./src
+      dockerfile: Octoporty.Agent/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=${AGENT_CONNECTION_STRING}
+      - Agent__GatewayUrl=${AGENT_GATEWAY_URL}
+      - Agent__ApiKey=${AGENT_API_KEY}
+      - Agent__Auth__Username=${AGENT_AUTH_USERNAME:-admin}
+      - Agent__Auth__Password=${AGENT_AUTH_PASSWORD}
+      - Logging__LogLevel=${LOG_LEVEL:-Debug}
+      - Logging__SeqUrl=${SEQ_URL:-}
+      - Logging__SeqApiKey=${SEQ_API_KEY:-}
+      - Logging__FilePath=/var/log/octoporty/agent-.log
+    volumes:
+      - agent-logs:/var/log/octoporty
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: ./src
+      dockerfile: Octoporty.Gateway/Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      - Gateway__ApiKey=${GATEWAY_API_KEY}
+      - Gateway__CaddyAdminUrl=${CADDY_ADMIN_URL:-http://caddy:2019}
+      - Gateway__ListenPort=8080
+      - Gateway__DebugJson=${GATEWAY_DEBUG_JSON:-false}
+      - Logging__LogLevel=${LOG_LEVEL:-Debug}
+      - Logging__SeqUrl=${SEQ_URL:-}
+      - Logging__SeqApiKey=${SEQ_API_KEY:-}
+      - Logging__FilePath=/var/log/octoporty/gateway-.log
+    volumes:
+      - gateway-logs:/var/log/octoporty
+    restart: unless-stopped
+
+volumes:
+  agent-logs:
+  gateway-logs:
