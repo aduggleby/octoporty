@@ -16,7 +16,6 @@ public class ListMappingsEndpoint : EndpointWithoutRequest<List<MappingResponse>
     public override void Configure()
     {
         Get("/api/mappings");
-        AllowAnonymous();
     }
 
     public override async Task HandleAsync(CancellationToken ct)

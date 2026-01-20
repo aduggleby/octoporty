@@ -1,3 +1,4 @@
+using System.Net;
 using FastEndpoints;
 using FluentValidation;
 using Octoporty.Agent.Data;
@@ -19,6 +20,19 @@ public class UpdateMappingFullRequest
 
 public class UpdateMappingValidator : Validator<UpdateMappingFullRequest>
 {
+    // CRITICAL-04/05: SSRF protection - blocked IP ranges (same as Create)
+    private static readonly string[] BlockedHostPatterns =
+    [
+        "localhost",
+        "127.",
+        "0.0.0.0",
+        "169.254.",
+        "metadata.",
+        "metadata",
+        "::1",
+        "[::1]"
+    ];
+
     public UpdateMappingValidator()
     {
         RuleFor(x => x.ExternalDomain)
@@ -32,10 +46,44 @@ public class UpdateMappingValidator : Validator<UpdateMappingFullRequest>
 
         RuleFor(x => x.InternalHost)
             .NotEmpty()
-            .MaximumLength(255);
+            .MaximumLength(255)
+            .Must(BeValidInternalHost)
+            .WithMessage("Invalid or blocked internal host. Cloud metadata endpoints and localhost are not allowed.");
 
         RuleFor(x => x.InternalPort)
             .InclusiveBetween(1, 65535);
+    }
+
+    private static bool BeValidInternalHost(string? host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+            return false;
+
+        var lowerHost = host.ToLowerInvariant().Trim();
+
+        foreach (var pattern in BlockedHostPatterns)
+        {
+            if (lowerHost.StartsWith(pattern, StringComparison.OrdinalIgnoreCase) ||
+                lowerHost.Equals(pattern, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        if (IPAddress.TryParse(host, out var ip))
+        {
+            if (IPAddress.IsLoopback(ip))
+                return false;
+
+            var bytes = ip.GetAddressBytes();
+            if (bytes.Length == 4 && bytes[0] == 169 && bytes[1] == 254)
+                return false;
+
+            if (ip.Equals(IPAddress.Any))
+                return false;
+        }
+
+        return true;
     }
 }
 
@@ -53,7 +101,6 @@ public class UpdateMappingEndpoint : Endpoint<UpdateMappingFullRequest, MappingR
     public override void Configure()
     {
         Put("/api/mappings/{id}");
-        AllowAnonymous();
     }
 
     public override async Task HandleAsync(UpdateMappingFullRequest req, CancellationToken ct)

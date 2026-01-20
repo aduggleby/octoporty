@@ -38,18 +38,33 @@ public class GetStatusEndpoint : EndpointWithoutRequest<AgentStatusResponse>
             uptimeSeconds = (DateTime.UtcNow - _tunnelClient.LastConnectedAt.Value).TotalSeconds;
         }
 
+        // MEDIUM-01: Authenticated endpoint can return more info, but still redact sensitive data
         await Send.OkAsync(new AgentStatusResponse
         {
             ConnectionStatus = _tunnelClient.State.ToString(),
-            GatewayUrl = _options.GatewayUrl,
+            GatewayUrl = RedactUrl(_options.GatewayUrl), // Redact credentials if present
             LastConnected = _tunnelClient.LastConnectedAt,
-            LastDisconnected = null, // Could track this if needed
-            ReconnectAttempts = 0, // Could expose from TunnelClient if needed
+            LastDisconnected = null,
+            ReconnectAttempts = 0,
             UptimeSeconds = uptimeSeconds,
             Version = "1.0.0",
             ActiveMappings = activeMappings,
             GatewayVersion = _tunnelClient.GatewayVersion,
-            LastError = _tunnelClient.LastError
+            LastError = null // Don't expose error details
         }, ct);
+    }
+
+    private static string RedactUrl(string url)
+    {
+        try
+        {
+            var uri = new Uri(url);
+            // Return only scheme, host, port - no credentials or path
+            return $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+        }
+        catch
+        {
+            return "[redacted]";
+        }
     }
 }

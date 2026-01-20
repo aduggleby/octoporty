@@ -21,7 +21,6 @@ public class GetMappingEndpoint : Endpoint<GetMappingRequest, MappingResponse>
     public override void Configure()
     {
         Get("/api/mappings/{id}");
-        AllowAnonymous();
     }
 
     public override async Task HandleAsync(GetMappingRequest req, CancellationToken ct)

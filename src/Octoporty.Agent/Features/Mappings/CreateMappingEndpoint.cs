@@ -1,3 +1,4 @@
+using System.Net;
 using FastEndpoints;
 using FluentValidation;
 using Octoporty.Agent.Data;
@@ -7,6 +8,19 @@ namespace Octoporty.Agent.Features.Mappings;
 
 public class CreateMappingValidator : Validator<CreateMappingRequest>
 {
+    // CRITICAL-04/05: SSRF protection - blocked IP ranges
+    private static readonly string[] BlockedHostPatterns =
+    [
+        "localhost",
+        "127.",
+        "0.0.0.0",
+        "169.254.",      // Link-local / cloud metadata
+        "metadata.",     // Cloud metadata services
+        "metadata",
+        "::1",           // IPv6 localhost
+        "[::1]"
+    ];
+
     public CreateMappingValidator()
     {
         RuleFor(x => x.ExternalDomain)
@@ -20,10 +34,49 @@ public class CreateMappingValidator : Validator<CreateMappingRequest>
 
         RuleFor(x => x.InternalHost)
             .NotEmpty()
-            .MaximumLength(255);
+            .MaximumLength(255)
+            .Must(BeValidInternalHost)
+            .WithMessage("Invalid or blocked internal host. Cloud metadata endpoints and localhost are not allowed.");
 
         RuleFor(x => x.InternalPort)
             .InclusiveBetween(1, 65535);
+    }
+
+    private static bool BeValidInternalHost(string? host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+            return false;
+
+        var lowerHost = host.ToLowerInvariant().Trim();
+
+        // Check against blocked patterns
+        foreach (var pattern in BlockedHostPatterns)
+        {
+            if (lowerHost.StartsWith(pattern, StringComparison.OrdinalIgnoreCase) ||
+                lowerHost.Equals(pattern, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        // Try to parse as IP and check for blocked ranges
+        if (IPAddress.TryParse(host, out var ip))
+        {
+            // Block loopback
+            if (IPAddress.IsLoopback(ip))
+                return false;
+
+            // Block link-local (169.254.x.x)
+            var bytes = ip.GetAddressBytes();
+            if (bytes.Length == 4 && bytes[0] == 169 && bytes[1] == 254)
+                return false;
+
+            // Block 0.0.0.0
+            if (ip.Equals(IPAddress.Any))
+                return false;
+        }
+
+        return true;
     }
 }
 
@@ -41,7 +94,6 @@ public class CreateMappingEndpoint : Endpoint<CreateMappingRequest, MappingRespo
     public override void Configure()
     {
         Post("/api/mappings");
-        AllowAnonymous();
     }
 
     public override async Task HandleAsync(CreateMappingRequest req, CancellationToken ct)

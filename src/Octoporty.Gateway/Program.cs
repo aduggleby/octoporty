@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.Extensions.Options;
 using Octoporty.Gateway.Services;
 using Octoporty.Shared.Logging;
 using Octoporty.Shared.Options;
@@ -16,25 +19,58 @@ builder.Services.AddHttpClient<ICaddyAdminClient, CaddyAdminClient>();
 
 var app = builder.Build();
 
+// Validate required configuration at startup
+var gatewayOptions = app.Services.GetRequiredService<IOptions<GatewayOptions>>().Value;
+if (string.IsNullOrWhiteSpace(gatewayOptions.ApiKey) || gatewayOptions.ApiKey.Length < 32)
+{
+    throw new InvalidOperationException("Gateway__ApiKey must be at least 32 characters");
+}
+
 app.UseWebSockets();
 app.UseRequestRouting();
 
+// Health endpoint - minimal info for unauthenticated access
 app.MapGet("/health", (ITunnelConnectionManager connectionManager) =>
 {
     var hasConnection = connectionManager.HasActiveConnection;
     return Results.Ok(new
     {
-        status = hasConnection ? "healthy" : "degraded",
-        tunnelConnected = hasConnection
+        status = hasConnection ? "healthy" : "degraded"
     });
 });
 
-app.MapGet("/tunnel", async (HttpContext context, TunnelWebSocketHandler handler, CancellationToken ct) =>
+// CRITICAL-02: Validate API key BEFORE accepting WebSocket connection
+app.MapGet("/tunnel", async (HttpContext context, TunnelWebSocketHandler handler, IOptions<GatewayOptions> options, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.WebSockets.IsWebSocketRequest)
     {
         context.Response.StatusCode = 400;
         await context.Response.WriteAsync("WebSocket connection required");
+        return;
+    }
+
+    // Pre-connection authentication - validate API key header before accepting WebSocket
+    var apiKey = context.Request.Headers["X-Api-Key"].FirstOrDefault()
+                 ?? context.Request.Query["api_key"].FirstOrDefault();
+
+    if (string.IsNullOrEmpty(apiKey))
+    {
+        logger.LogWarning("Tunnel connection rejected: missing API key from {RemoteIp}",
+            context.Connection.RemoteIpAddress);
+        context.Response.StatusCode = 401;
+        await context.Response.WriteAsync("API key required");
+        return;
+    }
+
+    // Constant-time comparison to prevent timing attacks
+    var expectedKey = Encoding.UTF8.GetBytes(options.Value.ApiKey);
+    var providedKey = Encoding.UTF8.GetBytes(apiKey);
+    if (!CryptographicOperations.FixedTimeEquals(expectedKey, providedKey))
+    {
+        logger.LogWarning("Tunnel connection rejected: invalid API key from {RemoteIp}",
+            context.Connection.RemoteIpAddress);
+        context.Response.StatusCode = 401;
+        await context.Response.WriteAsync("Invalid API key");
         return;
     }
 

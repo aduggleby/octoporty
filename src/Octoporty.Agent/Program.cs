@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Octoporty.Agent.Data;
+using Octoporty.Agent.Features.Auth;
 using Octoporty.Agent.Hubs;
 using Octoporty.Agent.Services;
 using Octoporty.Shared.Logging;
@@ -18,11 +19,27 @@ var agentOptions = builder.Configuration.GetSection("Agent").Get<AgentOptions>()
 builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("Agent"));
 builder.Services.Configure<LoggingOptions>(builder.Configuration.GetSection("Logging"));
 
+// CRITICAL-03: Validate JWT secret is at least 32 characters
+if (string.IsNullOrWhiteSpace(agentOptions.JwtSecret) || agentOptions.JwtSecret.Length < 32)
+{
+    throw new InvalidOperationException(
+        "Agent__JwtSecret must be at least 32 characters. " +
+        "Generate one with: openssl rand -hex 32");
+}
+
+// CRITICAL-07: Require non-empty password
+if (string.IsNullOrWhiteSpace(agentOptions.Auth.Password))
+{
+    throw new InvalidOperationException(
+        "Agent__Auth__Password must be set. " +
+        "Configure a strong password for the admin user.");
+}
+
 // Database
 builder.Services.AddDbContext<OctoportyDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// JWT Authentication
+// JWT Authentication with cookie support (HIGH-01)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -34,15 +51,32 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = "Octoporty.Agent",
             ValidAudience = "Octoporty.Agent.Web",
+            // CRITICAL-03: Use full secret, no padding
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(agentOptions.JwtSecret.PadRight(32, '_')))
+                Encoding.UTF8.GetBytes(agentOptions.JwtSecret))
         };
 
-        // Allow SignalR to get token from query string
+        // HIGH-01: Support both cookie and header-based authentication
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
+                // 1. Check Authorization header (default behavior)
+                // 2. Check cookie (for browser requests)
+                // 3. Check query string (for SignalR)
+
+                if (string.IsNullOrEmpty(context.Token))
+                {
+                    // Try cookie
+                    var cookieToken = context.Request.Cookies["octoporty_access"];
+                    if (!string.IsNullOrEmpty(cookieToken))
+                    {
+                        context.Token = cookieToken;
+                        return Task.CompletedTask;
+                    }
+                }
+
+                // SignalR query string token
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
 
@@ -57,6 +91,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+
+// MEDIUM-02: Rate limiting for login
+builder.Services.AddSingleton<LoginRateLimiter>();
+
+// HIGH-03: Refresh token store
+builder.Services.AddSingleton<RefreshTokenStore>();
 
 // FastEndpoints
 builder.Services.AddFastEndpoints();
@@ -95,16 +135,12 @@ app.UseFastEndpoints(c =>
 // SignalR hub
 app.MapHub<StatusHub>("/hub/status");
 
-// Health check (unauthenticated)
+// Health check (unauthenticated) - MEDIUM-03: Minimal info exposure
 app.MapGet("/health", (TunnelClient tunnelClient) =>
 {
     return Results.Ok(new
     {
-        status = tunnelClient.State == TunnelClientState.Connected ? "healthy" : "degraded",
-        tunnelState = tunnelClient.State.ToString(),
-        lastConnected = tunnelClient.LastConnectedAt,
-        gatewayVersion = tunnelClient.GatewayVersion,
-        lastError = tunnelClient.LastError
+        status = tunnelClient.State == TunnelClientState.Connected ? "healthy" : "degraded"
     });
 });
 

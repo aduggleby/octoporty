@@ -22,7 +22,6 @@ public class DeleteMappingEndpoint : Endpoint<DeleteMappingRequest>
     public override void Configure()
     {
         Delete("/api/mappings/{id}");
-        AllowAnonymous();
     }
 
     public override async Task HandleAsync(DeleteMappingRequest req, CancellationToken ct)
