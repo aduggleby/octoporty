@@ -1,3 +1,8 @@
+// StatusHub.cs
+// SignalR hub for real-time status updates to the web UI.
+// Requires JWT authentication - only logged-in users receive updates.
+// Broadcasts tunnel connection state and mapping status changes.
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 

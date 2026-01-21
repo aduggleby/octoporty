@@ -1,3 +1,8 @@
+# Dockerfile
+# Multi-stage build for Octoporty Gateway.
+# Uses .NET 10 SDK for build and chiseled runtime for minimal attack surface.
+# Gateway listens on port 17200 for WebSocket and HTTP traffic.
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
@@ -8,13 +13,16 @@ RUN dotnet restore "Octoporty.Gateway/Octoporty.Gateway.csproj"
 COPY Octoporty.Shared/ Octoporty.Shared/
 COPY Octoporty.Gateway/ Octoporty.Gateway/
 WORKDIR /src/Octoporty.Gateway
-RUN dotnet publish -c Release -o /app/publish --no-restore
+RUN dotnet publish -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS runtime
 WORKDIR /app
-EXPOSE 8080
 
-ENV ASPNETCORE_URLS=http://+:8080
+# Gateway port (17200 range)
+EXPOSE 17200
+
+ENV ASPNETCORE_URLS=http://+:17200
+ENV ASPNETCORE_ENVIRONMENT=Production
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 
 COPY --from=build /app/publish .

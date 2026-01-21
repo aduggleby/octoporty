@@ -1,3 +1,7 @@
+// Models.cs
+// Request/response DTOs for authentication endpoints.
+// Supports JWT access tokens (15min) and refresh tokens (7 days).
+
 namespace Octoporty.Agent.Features.Auth;
 
 public record LoginRequest

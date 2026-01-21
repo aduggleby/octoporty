@@ -1,10 +1,10 @@
+// LogoutEndpoint.cs
+// Clears authentication cookies to log out the user.
+// AllowAnonymous to allow logout even if access token expired.
+
 using FastEndpoints;
 
 namespace Octoporty.Agent.Features.Auth;
-
-/// <summary>
-/// Logout endpoint - clears auth cookies.
-/// </summary>
 public class LogoutEndpoint : EndpointWithoutRequest
 {
     public override void Configure()

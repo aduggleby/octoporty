@@ -1,3 +1,7 @@
+// StatusNotifier.cs
+// Broadcasts real-time status updates to connected web UI clients via SignalR.
+// Sends tunnel connection state changes and individual mapping status updates.
+
 using Microsoft.AspNetCore.SignalR;
 using Octoporty.Agent.Hubs;
 

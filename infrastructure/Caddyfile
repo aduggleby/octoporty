@@ -1,32 +1,40 @@
-# Octoporty Edge Proxy Configuration
-# This Caddyfile serves as the base configuration.
-# Dynamic routes are added via Caddy's admin API by the Gateway.
+# Caddyfile
+# Caddy configuration for Octoporty Gateway.
+# In test mode, routes directly to Gateway without HTTPS.
+# Dynamic routes are added via Caddy Admin API by Gateway.
 
 {
-	# Global options
-	admin :2019
+    # Enable admin API for Gateway to manage routes
+    admin 0.0.0.0:2019
 
-	# Enable automatic HTTPS
-	email {$ACME_EMAIL:admin@example.com}
-
-	# Use Let's Encrypt staging for testing
-	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+    # For testing without ACME - disable auto HTTPS
+    # Remove this block in production to enable automatic HTTPS
+    auto_https off
 }
 
-# Health check endpoint for the edge proxy itself
+# Health check endpoint on port 80
 :80 {
-	respond /health "OK" 200
+    respond /health "OK" 200
 
-	# Default response for unconfigured routes
-	respond "No tunnel configured for this host" 503
+    # Fallback - proxy everything to Gateway
+    # Gateway's RequestRoutingMiddleware will handle routing by Host header
+    reverse_proxy gateway:17200 {
+        # WebSocket support for tunnel connections
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
 }
 
-# Catch-all for HTTPS requests to unconfigured hosts
-:443 {
-	tls {
-		on_demand
-	}
-
-	respond /health "OK" 200
-	respond "No tunnel configured for this host" 503
-}
+# Note: Dynamic routes for tunneled services are added via the Admin API
+# Example route added by Gateway:
+#
+# :443 {
+#     @myapp host myapp.example.com
+#     handle @myapp {
+#         reverse_proxy gateway:17200 {
+#             header_up X-Octoporty-Mapping-Id "uuid-here"
+#         }
+#     }
+# }

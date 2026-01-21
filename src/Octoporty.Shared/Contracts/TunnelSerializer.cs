@@ -1,3 +1,8 @@
+// TunnelSerializer.cs
+// Handles MessagePack serialization/deserialization for tunnel protocol messages.
+// Uses Lz4 compression and UntrustedData security mode.
+// Enforces maximum message size (16MB) to prevent memory exhaustion attacks.
+
 using MessagePack;
 
 namespace Octoporty.Shared.Contracts;

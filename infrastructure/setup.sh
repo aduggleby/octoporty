@@ -99,10 +99,10 @@ services:
   gateway:
     image: ghcr.io/${GITHUB_REPOSITORY:-octoporty}/gateway:${VERSION:-latest}
     ports:
-      - "5000:8080"
+      - "17200:8080"
     environment:
       - Gateway__ApiKey=${API_KEY}
-      - Gateway__CaddyAdminUrl=http://caddy:2019
+      - Gateway__CaddyAdminUrl=http://caddy:17202
       - Logging__LogLevel=Information
     depends_on:
       - caddy
@@ -117,9 +117,9 @@ services:
   caddy:
     image: caddy:2-alpine
     ports:
-      - "80:80"
-      - "443:443"
-      - "2019:2019"
+      - "17280:80"
+      - "17243:443"
+      - "17202:2019"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -139,16 +139,16 @@ COMPOSE_EOF
 echo "Downloading Caddyfile..."
 cat > Caddyfile << 'CADDY_EOF'
 {
-	admin :2019
+	admin :17202
 	email {$ACME_EMAIL:admin@example.com}
 }
 
-:80 {
+:17280 {
 	respond /health "OK" 200
 	respond "No tunnel configured for this host" 503
 }
 
-:443 {
+:17243 {
 	tls {
 		on_demand
 	}
@@ -194,13 +194,13 @@ echo "Waiting for services to start..."
 sleep 10
 
 # Health check
-if curl -sf http://localhost:5000/health > /dev/null 2>&1; then
+if curl -sf http://localhost:17200/health > /dev/null 2>&1; then
     echo ""
     echo "=== Setup Complete ==="
     echo ""
     echo "Octoporty Gateway is running!"
     echo ""
-    echo "Gateway URL: ws://$(curl -s ifconfig.me):5000/tunnel"
+    echo "Gateway URL: ws://$(curl -s ifconfig.me):17200/tunnel"
     echo "API Key: Check .env file in ${OCTOPORTY_DIR}"
     echo ""
     echo "Useful commands:"

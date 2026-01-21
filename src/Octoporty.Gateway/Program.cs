@@ -1,6 +1,13 @@
+// Program.cs
+// Entry point for the Octoporty Gateway service.
+// Configures WebSocket endpoint for Agent connections with pre-connection API key validation.
+// Validates API key length at startup (minimum 32 characters).
+// Registers tunnel services and request routing middleware.
+
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
+using Octoporty.Gateway.Features.Test;
 using Octoporty.Gateway.Services;
 using Octoporty.Shared.Logging;
 using Octoporty.Shared.Options;
@@ -38,6 +45,9 @@ app.MapGet("/health", (ITunnelConnectionManager connectionManager) =>
         status = hasConnection ? "healthy" : "degraded"
     });
 });
+
+// Test endpoints for verifying tunnel connectivity without ACME/Caddy
+app.MapTunnelTestEndpoints();
 
 // CRITICAL-02: Validate API key BEFORE accepting WebSocket connection
 app.MapGet("/tunnel", async (HttpContext context, TunnelWebSocketHandler handler, IOptions<GatewayOptions> options, ILogger<Program> logger, CancellationToken ct) =>

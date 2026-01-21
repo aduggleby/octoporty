@@ -1,3 +1,9 @@
+// Program.cs
+// Entry point for the Octoporty Agent service.
+// Configures JWT authentication with cookie and header support for SPAs.
+// Validates JwtSecret (32+ chars) and Password at startup.
+// Serves embedded React SPA from wwwroot with fallback routing.
+
 using System.Text;
 using FastEndpoints;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -35,9 +41,9 @@ if (string.IsNullOrWhiteSpace(agentOptions.Auth.Password))
         "Configure a strong password for the admin user.");
 }
 
-// Database
+// Database (SQLite for lightweight local storage)
 builder.Services.AddDbContext<OctoportyDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // JWT Authentication with cookie support (HIGH-01)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -90,7 +96,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Default policy requires authenticated user
+    options.AddPolicy("Authenticated", policy =>
+        policy.RequireAuthenticatedUser());
+    options.FallbackPolicy = options.GetPolicy("Authenticated");
+});
 
 // MEDIUM-02: Rate limiting for login
 builder.Services.AddSingleton<LoginRateLimiter>();
@@ -142,10 +154,10 @@ app.MapGet("/health", (TunnelClient tunnelClient) =>
     {
         status = tunnelClient.State == TunnelClientState.Connected ? "healthy" : "degraded"
     });
-});
+}).AllowAnonymous();
 
-// SPA fallback - serve index.html for client-side routing
-app.MapFallbackToFile("index.html");
+// SPA fallback - serve index.html for client-side routing (SPA handles auth)
+app.MapFallbackToFile("index.html").AllowAnonymous();
 
 // Wire up status notifications
 var tunnelClient = app.Services.GetRequiredService<TunnelClient>();

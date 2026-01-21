@@ -1,3 +1,7 @@
+// ReconnectEndpoint.cs
+// Triggers a configuration resync with the Gateway.
+// Used when mappings change or to force reconnection.
+
 using FastEndpoints;
 using Octoporty.Agent.Services;
 

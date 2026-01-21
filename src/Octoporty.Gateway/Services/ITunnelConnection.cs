@@ -1,3 +1,8 @@
+// ITunnelConnection.cs
+// Interface representing an active tunnel connection from an Agent.
+// Exposes connection metadata and methods for sending/receiving tunnel messages.
+// Supports both request-response and streaming patterns.
+
 using Octoporty.Shared.Contracts;
 
 namespace Octoporty.Gateway.Services;

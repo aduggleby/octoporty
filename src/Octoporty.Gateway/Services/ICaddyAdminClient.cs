@@ -1,3 +1,7 @@
+// ICaddyAdminClient.cs
+// Interface for Caddy Admin API client.
+// Manages dynamic route creation/removal for tunnel mappings.
+
 using Octoporty.Shared.Contracts;
 
 namespace Octoporty.Gateway.Services;

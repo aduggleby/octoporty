@@ -7,10 +7,10 @@ services:
       context: ../src
       dockerfile: Octoporty.Gateway/Dockerfile
     ports:
-      - "5000:8080"
+      - "17200:8080"
     environment:
       - Gateway__ApiKey=dev-api-key-change-in-production
-      - Gateway__CaddyAdminUrl=http://caddy:2019
+      - Gateway__CaddyAdminUrl=http://caddy:17202
       - Logging__LogLevel=Debug
     depends_on:
       - caddy
@@ -24,9 +24,9 @@ services:
   caddy:
     image: caddy:2-alpine
     ports:
-      - "80:80"
-      - "443:443"
-      - "2019:2019"
+      - "17280:80"
+      - "17243:443"
+      - "17202:2019"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -36,7 +36,7 @@ services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     ports:
-      - "1433:1433"
+      - "17203:1433"
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=Dev_Password123!
@@ -56,7 +56,7 @@ services:
       context: ../src
       dockerfile: Octoporty.Agent/Dockerfile
     ports:
-      - "5001:8080"
+      - "17201:8080"
     environment:
       - Agent__GatewayUrl=ws://gateway:8080/tunnel
       - Agent__ApiKey=dev-api-key-change-in-production

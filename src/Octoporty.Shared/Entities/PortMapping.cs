@@ -1,3 +1,8 @@
+// PortMapping.cs
+// Entity representing a tunnel port mapping configuration.
+// Maps external domain/port to internal host/port with TLS options.
+// ExternalDomain must be unique - enforced by database constraint.
+
 namespace Octoporty.Shared.Entities;
 
 public class PortMapping

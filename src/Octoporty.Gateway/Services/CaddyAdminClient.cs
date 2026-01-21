@@ -1,3 +1,8 @@
+// CaddyAdminClient.cs
+// HTTP client for Caddy's Admin API to dynamically configure reverse proxy routes.
+// Creates routes that forward external requests to the Gateway, adding X-Octoporty-Mapping-Id header.
+// Maintains local cache of known routes to avoid redundant API calls.
+
 using System.Collections.Concurrent;
 using System.Net.Http.Json;
 using System.Text.Json;

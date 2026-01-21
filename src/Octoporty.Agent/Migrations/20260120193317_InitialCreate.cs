@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Octoporty.Agent.Data.Migrations
+namespace Octoporty.Agent.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -15,17 +15,17 @@ namespace Octoporty.Agent.Data.Migrations
                 name: "PortMappings",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ExternalDomain = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    ExternalPort = table.Column<int>(type: "int", nullable: false),
-                    InternalHost = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    InternalPort = table.Column<int>(type: "int", nullable: false),
-                    InternalUseTls = table.Column<bool>(type: "bit", nullable: false),
-                    AllowSelfSignedCerts = table.Column<bool>(type: "bit", nullable: false),
-                    IsEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ExternalDomain = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
+                    ExternalPort = table.Column<int>(type: "INTEGER", nullable: false),
+                    InternalHost = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
+                    InternalPort = table.Column<int>(type: "INTEGER", nullable: false),
+                    InternalUseTls = table.Column<bool>(type: "INTEGER", nullable: false),
+                    AllowSelfSignedCerts = table.Column<bool>(type: "INTEGER", nullable: false),
+                    IsEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -36,14 +36,14 @@ namespace Octoporty.Agent.Data.Migrations
                 name: "ConnectionLogs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    PortMappingId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ConnectedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    DisconnectedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ClientIp = table.Column<string>(type: "nvarchar(45)", maxLength: 45, nullable: true),
-                    BytesSent = table.Column<long>(type: "bigint", nullable: false),
-                    BytesReceived = table.Column<long>(type: "bigint", nullable: false),
-                    DisconnectReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    PortMappingId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ConnectedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    DisconnectedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    ClientIp = table.Column<string>(type: "TEXT", maxLength: 45, nullable: true),
+                    BytesSent = table.Column<long>(type: "INTEGER", nullable: false),
+                    BytesReceived = table.Column<long>(type: "INTEGER", nullable: false),
+                    DisconnectReason = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -60,20 +60,20 @@ namespace Octoporty.Agent.Data.Migrations
                 name: "RequestLogs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    PortMappingId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ConnectionLogId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Method = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    Path = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: false),
-                    QueryString = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
-                    StatusCode = table.Column<int>(type: "int", nullable: false),
-                    RequestSize = table.Column<long>(type: "bigint", nullable: false),
-                    ResponseSize = table.Column<long>(type: "bigint", nullable: false),
-                    DurationMs = table.Column<int>(type: "int", nullable: false),
-                    ClientIp = table.Column<string>(type: "nvarchar(45)", maxLength: 45, nullable: true),
-                    UserAgent = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    ErrorMessage = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true)
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    PortMappingId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ConnectionLogId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    Timestamp = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Method = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
+                    Path = table.Column<string>(type: "TEXT", maxLength: 2048, nullable: false),
+                    QueryString = table.Column<string>(type: "TEXT", maxLength: 2048, nullable: true),
+                    StatusCode = table.Column<int>(type: "INTEGER", nullable: false),
+                    RequestSize = table.Column<long>(type: "INTEGER", nullable: false),
+                    ResponseSize = table.Column<long>(type: "INTEGER", nullable: false),
+                    DurationMs = table.Column<int>(type: "INTEGER", nullable: false),
+                    ClientIp = table.Column<string>(type: "TEXT", maxLength: 45, nullable: true),
+                    UserAgent = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    ErrorMessage = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true)
                 },
                 constraints: table =>
                 {

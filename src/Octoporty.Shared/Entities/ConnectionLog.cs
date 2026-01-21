@@ -1,3 +1,7 @@
+// ConnectionLog.cs
+// Entity for tracking tunnel connection sessions.
+// Records connection duration, bytes transferred, and disconnect reasons for audit.
+
 namespace Octoporty.Shared.Entities;
 
 public class ConnectionLog

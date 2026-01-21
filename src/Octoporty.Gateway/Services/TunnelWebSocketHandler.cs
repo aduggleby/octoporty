@@ -1,3 +1,9 @@
+// TunnelWebSocketHandler.cs
+// Handles the WebSocket lifecycle for Agent tunnel connections.
+// Authenticates agents using constant-time API key comparison to prevent timing attacks.
+// Processes config sync to update Caddy routes and heartbeats for connection health.
+// Delegates request/response handling to TunnelConnection.
+
 using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
@@ -137,11 +143,16 @@ public class TunnelWebSocketHandler
 
     private async Task HandleMessageAsync(TunnelConnection connection, TunnelMessage message, CancellationToken ct)
     {
-        switch (message)
+        _logger.LogDebug("HandleMessageAsync received {MessageType} for connection {ConnectionId}",
+            message.GetType().Name, connection.ConnectionId);
+
+        try
         {
-            case ConfigSyncMessage configSync:
-                await HandleConfigSyncAsync(connection, configSync, ct);
-                break;
+            switch (message)
+            {
+                case ConfigSyncMessage configSync:
+                    await HandleConfigSyncAsync(connection, configSync, ct);
+                    break;
 
             case HeartbeatMessage heartbeat:
                 await HandleHeartbeatAsync(connection, heartbeat, ct);
@@ -162,6 +173,12 @@ public class TunnelWebSocketHandler
             default:
                 _logger.LogWarning("Unhandled message type: {MessageType}", message.GetType().Name);
                 break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling message {MessageType} for connection {ConnectionId}",
+                message.GetType().Name, connection.ConnectionId);
         }
     }
 

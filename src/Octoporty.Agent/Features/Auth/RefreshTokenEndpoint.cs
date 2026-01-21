@@ -1,3 +1,8 @@
+// RefreshTokenEndpoint.cs
+// Extends sessions without re-authentication by validating refresh tokens.
+// Issues new access token (15min) and rotates refresh token for security.
+// Uses in-memory RefreshTokenStore (consider distributed cache for production).
+
 using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -9,11 +14,6 @@ using Microsoft.IdentityModel.Tokens;
 using Octoporty.Shared.Options;
 
 namespace Octoporty.Agent.Features.Auth;
-
-/// <summary>
-/// HIGH-03: Token refresh endpoint for extending sessions without re-authentication.
-/// Validates refresh token and issues new short-lived access token.
-/// </summary>
 public class RefreshTokenEndpoint : Endpoint<RefreshTokenRequest, RefreshTokenResponse>
 {
     private readonly AgentOptions _options;

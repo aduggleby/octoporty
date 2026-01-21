@@ -1,3 +1,9 @@
+// TunnelConnection.cs
+// Manages a single WebSocket connection from an Agent.
+// Handles bidirectional message flow: receive loop reads incoming messages, send loop writes outbound.
+// Uses channels for backpressure and TaskCompletionSource for request-response correlation.
+// Supports streaming responses via Channel<StreamingResponse>.
+
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
@@ -48,8 +54,11 @@ public sealed class TunnelConnection : ITunnelConnection, IAsyncDisposable
 
     public void StartProcessing(Func<TunnelMessage, Task> onMessageReceived)
     {
+        _logger.LogDebug("StartProcessing called for connection {ConnectionId}, WebSocket state: {State}",
+            ConnectionId, _webSocket.State);
         _receiveTask = ReceiveLoopAsync(onMessageReceived, _cts.Token);
         _sendTask = SendLoopAsync(_cts.Token);
+        _logger.LogDebug("Receive and send loops started for connection {ConnectionId}", ConnectionId);
     }
 
     public async Task SendAsync(TunnelMessage message, CancellationToken ct)
@@ -188,14 +197,20 @@ public sealed class TunnelConnection : ITunnelConnection, IAsyncDisposable
                     var data = messageBuffer.ToArray();
                     messageBuffer.SetLength(0);
 
+                    _logger.LogDebug("Received complete message ({Bytes} bytes) on connection {ConnectionId}",
+                        data.Length, ConnectionId);
+
                     try
                     {
                         var message = TunnelSerializer.Deserialize(data);
+                        _logger.LogDebug("Deserialized message type {MessageType} on connection {ConnectionId}",
+                            message.GetType().Name, ConnectionId);
                         await onMessageReceived(message);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Failed to deserialize message on connection {ConnectionId}", ConnectionId);
+                        _logger.LogError(ex, "Failed to deserialize message ({Bytes} bytes) on connection {ConnectionId}",
+                            data.Length, ConnectionId);
                     }
                 }
             }

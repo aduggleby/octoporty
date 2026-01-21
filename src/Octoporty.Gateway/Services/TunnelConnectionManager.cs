@@ -1,3 +1,8 @@
+// TunnelConnectionManager.cs
+// Singleton manager for the active Agent tunnel connection.
+// Currently supports single-Agent mode (one active connection at a time).
+// Routes incoming requests to the Agent by matching Host header to port mappings.
+
 using Octoporty.Shared.Contracts;
 
 namespace Octoporty.Gateway.Services;

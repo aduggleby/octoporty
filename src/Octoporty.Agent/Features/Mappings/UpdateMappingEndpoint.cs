@@ -1,3 +1,8 @@
+// UpdateMappingEndpoint.cs
+// Updates an existing port mapping configuration.
+// Applies same SSRF validation as CreateMappingEndpoint.
+// Updates the UpdatedAt timestamp.
+
 using System.Net;
 using FastEndpoints;
 using FluentValidation;
@@ -100,7 +105,7 @@ public class UpdateMappingEndpoint : Endpoint<UpdateMappingFullRequest, MappingR
 
     public override void Configure()
     {
-        Put("/api/mappings/{id}");
+        Put("/api/v1/mappings/{id}");
     }
 
     public override async Task HandleAsync(UpdateMappingFullRequest req, CancellationToken ct)
@@ -130,14 +135,14 @@ public class UpdateMappingEndpoint : Endpoint<UpdateMappingFullRequest, MappingR
         await Send.OkAsync(new MappingResponse
         {
             Id = mapping.Id,
+            Name = mapping.Description ?? mapping.ExternalDomain,
             ExternalDomain = mapping.ExternalDomain,
             ExternalPort = mapping.ExternalPort,
             InternalHost = mapping.InternalHost,
             InternalPort = mapping.InternalPort,
-            InternalUseTls = mapping.InternalUseTls,
-            AllowSelfSignedCerts = mapping.AllowSelfSignedCerts,
-            IsEnabled = mapping.IsEnabled,
-            Description = mapping.Description,
+            InternalProtocol = mapping.InternalUseTls ? "Https" : "Http",
+            AllowInvalidCertificates = mapping.AllowSelfSignedCerts,
+            Enabled = mapping.IsEnabled,
             CreatedAt = mapping.CreatedAt,
             UpdatedAt = mapping.UpdatedAt
         }, ct);

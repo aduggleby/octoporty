@@ -1,3 +1,7 @@
+// Models.cs
+// Response DTO for the agent status endpoint.
+// Exposes connection state, uptime, and active mapping count.
+
 namespace Octoporty.Agent.Features.Status;
 
 public record AgentStatusResponse

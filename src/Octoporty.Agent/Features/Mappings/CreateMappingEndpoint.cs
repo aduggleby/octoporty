@@ -1,3 +1,8 @@
+// CreateMappingEndpoint.cs
+// Creates new port mapping configurations.
+// Validates against SSRF attacks by blocking localhost, 127.x.x.x, 169.254.x.x (cloud metadata).
+// ExternalDomain must be unique - enforced by database constraint.
+
 using System.Net;
 using FastEndpoints;
 using FluentValidation;
@@ -93,7 +98,7 @@ public class CreateMappingEndpoint : Endpoint<CreateMappingRequest, MappingRespo
 
     public override void Configure()
     {
-        Post("/api/mappings");
+        Post("/api/v1/mappings");
     }
 
     public override async Task HandleAsync(CreateMappingRequest req, CancellationToken ct)
@@ -121,14 +126,14 @@ public class CreateMappingEndpoint : Endpoint<CreateMappingRequest, MappingRespo
             new MappingResponse
             {
                 Id = mapping.Id,
+                Name = mapping.Description ?? mapping.ExternalDomain,
                 ExternalDomain = mapping.ExternalDomain,
                 ExternalPort = mapping.ExternalPort,
                 InternalHost = mapping.InternalHost,
                 InternalPort = mapping.InternalPort,
-                InternalUseTls = mapping.InternalUseTls,
-                AllowSelfSignedCerts = mapping.AllowSelfSignedCerts,
-                IsEnabled = mapping.IsEnabled,
-                Description = mapping.Description,
+                InternalProtocol = mapping.InternalUseTls ? "Https" : "Http",
+                AllowInvalidCertificates = mapping.AllowSelfSignedCerts,
+                Enabled = mapping.IsEnabled,
                 CreatedAt = mapping.CreatedAt,
                 UpdatedAt = mapping.UpdatedAt
             },

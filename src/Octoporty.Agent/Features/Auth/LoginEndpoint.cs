@@ -1,3 +1,9 @@
+// LoginEndpoint.cs
+// Authenticates users and issues JWT access tokens with HttpOnly cookie storage.
+// Uses constant-time comparison to prevent timing attacks on credentials.
+// Rate limited: 5 failed attempts in 60s triggers 5-minute lockout.
+// Returns both cookie and response body tokens for SPA compatibility.
+
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;

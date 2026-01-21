@@ -1,3 +1,7 @@
+// ListMappingsEndpoint.cs
+// Returns all port mappings ordered by ExternalDomain.
+// Requires authentication via JWT bearer token.
+
 using FastEndpoints;
 using Microsoft.EntityFrameworkCore;
 using Octoporty.Agent.Data;
@@ -15,7 +19,7 @@ public class ListMappingsEndpoint : EndpointWithoutRequest<List<MappingResponse>
 
     public override void Configure()
     {
-        Get("/api/mappings");
+        Get("/api/v1/mappings");
     }
 
     public override async Task HandleAsync(CancellationToken ct)
@@ -25,14 +29,14 @@ public class ListMappingsEndpoint : EndpointWithoutRequest<List<MappingResponse>
             .Select(m => new MappingResponse
             {
                 Id = m.Id,
+                Name = m.Description ?? m.ExternalDomain,  // Fallback to domain if no description
                 ExternalDomain = m.ExternalDomain,
                 ExternalPort = m.ExternalPort,
                 InternalHost = m.InternalHost,
                 InternalPort = m.InternalPort,
-                InternalUseTls = m.InternalUseTls,
-                AllowSelfSignedCerts = m.AllowSelfSignedCerts,
-                IsEnabled = m.IsEnabled,
-                Description = m.Description,
+                InternalProtocol = m.InternalUseTls ? "Https" : "Http",
+                AllowInvalidCertificates = m.AllowSelfSignedCerts,
+                Enabled = m.IsEnabled,
                 CreatedAt = m.CreatedAt,
                 UpdatedAt = m.UpdatedAt
             })

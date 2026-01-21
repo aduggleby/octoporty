@@ -1,3 +1,9 @@
+// RequestRoutingMiddleware.cs
+// ASP.NET Core middleware that forwards incoming HTTP requests through the tunnel to the Agent.
+// Routes by X-Octoporty-Mapping-Id header (set by Caddy) or Host header lookup.
+// Implements self-healing: removes Caddy routes when tunnel is unavailable.
+// Strips hop-by-hop headers and enforces 10MB max body size.
+
 using System.Diagnostics;
 using Octoporty.Shared.Contracts;
 
@@ -27,9 +33,9 @@ public sealed class RequestRoutingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        // Skip internal endpoints
+        // Skip internal endpoints (health, tunnel, and test endpoints)
         var path = context.Request.Path.Value ?? "";
-        if (path.StartsWith("/health") || path.StartsWith("/tunnel"))
+        if (path.StartsWith("/health") || path.StartsWith("/tunnel") || path.StartsWith("/test"))
         {
             await _next(context);
             return;

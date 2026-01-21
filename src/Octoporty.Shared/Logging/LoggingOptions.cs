@@ -1,3 +1,7 @@
+// LoggingOptions.cs
+// Configuration options for Serilog logging.
+// Supports console, file (with rotation), and Seq centralized logging.
+
 namespace Octoporty.Shared.Logging;
 
 public class LoggingOptions

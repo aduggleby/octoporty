@@ -1,3 +1,7 @@
+// RequestLog.cs
+// Entity for logging individual HTTP requests through the tunnel.
+// Tracks method, path, status, timing, and sizes for analytics and debugging.
+
 namespace Octoporty.Shared.Entities;
 
 public class RequestLog

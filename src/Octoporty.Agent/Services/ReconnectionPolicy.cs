@@ -1,3 +1,8 @@
+// ReconnectionPolicy.cs
+// Implements exponential backoff with jitter for tunnel reconnection attempts.
+// Base delay doubles each attempt (1s, 2s, 4s, 8s...) up to max of 60s.
+// Random 0-1s jitter prevents thundering herd when multiple agents reconnect.
+
 namespace Octoporty.Agent.Services;
 
 public class ReconnectionPolicy

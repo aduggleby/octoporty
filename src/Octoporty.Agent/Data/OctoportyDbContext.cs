@@ -1,3 +1,8 @@
+// OctoportyDbContext.cs
+// Entity Framework Core DbContext for the Agent's SQL Server database.
+// Defines PortMappings, ConnectionLogs, and RequestLogs with their relationships.
+// Enforces unique constraint on ExternalDomain to prevent duplicate mappings.
+
 using Microsoft.EntityFrameworkCore;
 using Octoporty.Shared.Entities;
 

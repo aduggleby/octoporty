@@ -1,3 +1,8 @@
+// AgentOptions.cs
+// Configuration options for the Octoporty Agent service.
+// Includes Gateway connection URL, API key, JWT secret, and auth credentials.
+// JwtSecret and Password are validated at startup (minimum lengths enforced).
+
 namespace Octoporty.Shared.Options;
 
 public class AgentOptions

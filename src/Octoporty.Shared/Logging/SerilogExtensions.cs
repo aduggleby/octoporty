@@ -1,3 +1,8 @@
+// SerilogExtensions.cs
+// Extension methods for configuring Serilog in Octoporty applications.
+// Configures console, file, and Seq sinks based on LoggingOptions.
+// Applies standard enrichers and log level overrides for Microsoft/System namespaces.
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Serilog;

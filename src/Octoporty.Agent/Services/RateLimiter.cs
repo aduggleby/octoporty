@@ -1,11 +1,12 @@
+// RateLimiter.cs
+// In-memory rate limiter for login attempts using sliding window approach.
+// Tracks failed attempts per IP address with configurable lockout duration.
+// Defaults: 5 attempts in 60s window triggers 5-minute lockout.
+// Clears tracking on successful login to allow immediate re-authentication.
+
 using System.Collections.Concurrent;
 
 namespace Octoporty.Agent.Services;
-
-/// <summary>
-/// MEDIUM-02: Simple in-memory rate limiter for login attempts.
-/// Uses sliding window approach - tracks attempts per IP with lockout.
-/// </summary>
 public class LoginRateLimiter
 {
     private readonly ConcurrentDictionary<string, RateLimitEntry> _attempts = new();

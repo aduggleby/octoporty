@@ -1,3 +1,8 @@
+// GetStatusEndpoint.cs
+// Returns agent connection status for the dashboard.
+// Redacts sensitive data (Gateway URL credentials, error details).
+// Authenticated endpoint - requires valid JWT.
+
 using FastEndpoints;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;

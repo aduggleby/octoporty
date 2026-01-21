@@ -1,0 +1,62 @@
+# docker-compose.gateway.yml
+# Production deployment configuration for Gateway + Caddy.
+# Caddy handles HTTP/HTTPS termination and reverse proxies to Gateway.
+# For testing without ACME, use direct Gateway access on port 17200.
+
+services:
+  gateway:
+    build:
+      context: ../src
+      dockerfile: Octoporty.Gateway/Dockerfile
+    container_name: octoporty-gateway
+    restart: unless-stopped
+    ports:
+      # Direct access for testing (bypass Caddy)
+      - "17200:17200"
+    environment:
+      # API key for Agent authentication (minimum 32 characters)
+      - Gateway__ApiKey=${GATEWAY_API_KEY:?Gateway API key required}
+      # Caddy admin API for route management
+      - Gateway__CaddyAdminUrl=http://caddy:2019
+      - Gateway__ListenPort=17200
+      - Logging__MinimumLevel=Information
+      - Logging__SeqUrl=${SEQ_URL:-}
+    networks:
+      - octoporty
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:17200/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: octoporty-caddy
+    restart: unless-stopped
+    ports:
+      # HTTP (redirect to HTTPS in production)
+      - "80:80"
+      # HTTPS with automatic certificates
+      - "443:443"
+      # Admin API (internal only, not exposed publicly)
+      - "127.0.0.1:2019:2019"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      # Email for ACME certificates
+      - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
+    networks:
+      - octoporty
+    depends_on:
+      - gateway
+
+networks:
+  octoporty:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,3 +1,7 @@
+// DeleteMappingEndpoint.cs
+// Deletes a port mapping by ID.
+// Returns 404 if mapping not found, 204 on success.
+
 using FastEndpoints;
 using Octoporty.Agent.Data;
 
@@ -21,7 +25,7 @@ public class DeleteMappingEndpoint : Endpoint<DeleteMappingRequest>
 
     public override void Configure()
     {
-        Delete("/api/mappings/{id}");
+        Delete("/api/v1/mappings/{id}");
     }
 
     public override async Task HandleAsync(DeleteMappingRequest req, CancellationToken ct)

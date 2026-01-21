@@ -1,3 +1,7 @@
+// MessageType.cs
+// Defines the byte-sized enum for all tunnel protocol message types.
+// Used as discriminator in MessagePack serialization to identify message kind.
+
 namespace Octoporty.Shared.Contracts;
 
 public enum MessageType : byte

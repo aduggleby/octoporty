@@ -1,3 +1,8 @@
+// TunnelMessages.cs
+// MessagePack-serializable message types for the WebSocket tunnel protocol.
+// Uses Union attribute for polymorphic deserialization of TunnelMessage subtypes.
+// Message flow: Auth → ConfigSync → Heartbeat loop + Request/Response forwarding.
+
 using MessagePack;
 
 namespace Octoporty.Shared.Contracts;

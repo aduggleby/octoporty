@@ -1,3 +1,9 @@
+// TunnelClient.cs
+// BackgroundService that maintains a persistent WebSocket connection to the Gateway.
+// State machine: Disconnected → Connecting → Authenticating → Syncing → Connected.
+// Implements automatic reconnection with exponential backoff via ReconnectionPolicy.
+// Handles heartbeats (30s interval) and forwards requests to internal services.
+
 using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
@@ -24,6 +30,7 @@ public class TunnelClient : BackgroundService
     private Task? _receiveTask;
     private Task? _sendTask;
     private Task? _heartbeatTask;
+    private TaskCompletionSource<ConfigAckMessage>? _pendingConfigAck;
 
     private const string AgentVersion = "1.0.0";
     private const int HeartbeatIntervalSeconds = 30;
@@ -88,6 +95,10 @@ public class TunnelClient : BackgroundService
 
         _webSocket = new ClientWebSocket();
         _connectionCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+        // CRITICAL-02: Send API key header for pre-connection authentication
+        // Gateway validates this BEFORE accepting the WebSocket upgrade
+        _webSocket.Options.SetRequestHeader("X-Api-Key", _options.ApiKey);
 
         try
         {
@@ -196,34 +207,58 @@ public class TunnelClient : BackgroundService
             ConfigHash = configHash
         };
 
+        _logger.LogDebug("Sending ConfigSyncMessage with {Count} mappings, hash {Hash}",
+            mappings.Length, configHash[..8]);
         await SendMessageAsync(syncMessage, ct);
+        _logger.LogDebug("ConfigSyncMessage sent, waiting for ack...");
 
-        // Wait for ack
+        // Wait for ack - loop to handle other messages (like HeartbeatAck) that may arrive
         var buffer = new byte[4096];
-        var result = await _webSocket!.ReceiveAsync(buffer, ct);
+        var timeout = TimeSpan.FromSeconds(30);
+        using var timeoutCts = new CancellationTokenSource(timeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
 
-        if (result.MessageType == WebSocketMessageType.Close)
+        while (!linkedCts.Token.IsCancellationRequested)
         {
-            throw new InvalidOperationException("Gateway closed connection during config sync");
-        }
+            var result = await _webSocket!.ReceiveAsync(buffer, linkedCts.Token);
 
-        var response = TunnelSerializer.Deserialize(buffer.AsMemory(0, result.Count));
+            _logger.LogDebug("Received response during config sync: MessageType={Type}, Count={Count}",
+                result.MessageType, result.Count);
 
-        if (response is ConfigAckMessage ackMessage)
-        {
-            if (ackMessage.Success)
+            if (result.MessageType == WebSocketMessageType.Close)
             {
-                _logger.LogInformation("Configuration synced successfully ({Count} mappings)", mappings.Length);
+                _logger.LogWarning("Gateway closed connection during config sync. CloseStatus={Status}, CloseDescription={Description}",
+                    result.CloseStatus, result.CloseStatusDescription);
+                throw new InvalidOperationException("Gateway closed connection during config sync");
             }
-            else
+
+            var response = TunnelSerializer.Deserialize(buffer.AsMemory(0, result.Count));
+            _logger.LogDebug("Config sync response type: {Type}", response.GetType().Name);
+
+            if (response is ConfigAckMessage ackMessage)
             {
-                throw new InvalidOperationException($"Config sync failed: {ackMessage.Error}");
+                if (ackMessage.Success)
+                {
+                    _logger.LogInformation("Configuration synced successfully ({Count} mappings)", mappings.Length);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Config sync failed: {ackMessage.Error}");
+                }
+                return; // Got our ack, done
             }
+
+            // Handle other message types that may arrive while waiting
+            if (response is HeartbeatAckMessage)
+            {
+                _logger.LogDebug("Received HeartbeatAck while waiting for ConfigAck, continuing to wait...");
+                continue;
+            }
+
+            _logger.LogWarning("Unexpected message during config sync: {Type}, continuing to wait...", response.GetType().Name);
         }
-        else
-        {
-            throw new InvalidOperationException($"Unexpected response during config sync: {response.GetType().Name}");
-        }
+
+        throw new TimeoutException("Timeout waiting for ConfigAckMessage");
     }
 
     public async Task ResyncConfigurationAsync(CancellationToken ct)
@@ -234,7 +269,66 @@ public class TunnelClient : BackgroundService
             return;
         }
 
-        await SyncConfigurationAsync(ct);
+        using var scope = _serviceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<OctoportyDbContext>();
+
+        var mappings = await db.PortMappings
+            .Where(m => m.IsEnabled)
+            .Select(m => new PortMappingDto
+            {
+                Id = m.Id,
+                ExternalDomain = m.ExternalDomain,
+                ExternalPort = m.ExternalPort,
+                InternalHost = m.InternalHost,
+                InternalPort = m.InternalPort,
+                InternalUseTls = m.InternalUseTls,
+                AllowSelfSignedCerts = m.AllowSelfSignedCerts,
+                IsEnabled = m.IsEnabled
+            })
+            .ToArrayAsync(ct);
+
+        var configHash = ComputeConfigHash(mappings);
+
+        var syncMessage = new ConfigSyncMessage
+        {
+            Mappings = mappings,
+            ConfigHash = configHash
+        };
+
+        _logger.LogDebug("Resyncing configuration with {Count} mappings, hash {Hash}",
+            mappings.Length, configHash[..8]);
+
+        // Set up the pending ack before sending
+        _pendingConfigAck = new TaskCompletionSource<ConfigAckMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Send through the outbound channel (will be picked up by SendLoopAsync)
+        await _outboundChannel.Writer.WriteAsync(syncMessage, ct);
+
+        // Wait for the ack with timeout
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+
+        try
+        {
+            var ackMessage = await _pendingConfigAck.Task.WaitAsync(linkedCts.Token);
+
+            if (ackMessage.Success)
+            {
+                _logger.LogInformation("Configuration resynced successfully ({Count} mappings)", mappings.Length);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Config resync failed: {ackMessage.Error}");
+            }
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+        {
+            throw new TimeoutException("Timeout waiting for ConfigAckMessage during resync");
+        }
+        finally
+        {
+            _pendingConfigAck = null;
+        }
     }
 
     private async Task ReceiveLoopAsync(CancellationToken ct)
@@ -325,6 +419,11 @@ public class TunnelClient : BackgroundService
             case HeartbeatAckMessage heartbeatAck:
                 var latency = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - heartbeatAck.Timestamp;
                 _logger.LogDebug("Heartbeat ack received (latency: {Latency}ms)", latency);
+                break;
+
+            case ConfigAckMessage configAck:
+                _logger.LogDebug("ConfigAck received: Success={Success}", configAck.Success);
+                _pendingConfigAck?.TrySetResult(configAck);
                 break;
 
             case DisconnectMessage disconnect:

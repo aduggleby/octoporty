@@ -7,10 +7,10 @@ services:
       context: ../src
       dockerfile: Octoporty.Gateway/Dockerfile
     ports:
-      - "5000:8080"
+      - "17200:8080"
     environment:
       - Gateway__ApiKey=${API_KEY}
-      - Gateway__CaddyAdminUrl=http://caddy:2019
+      - Gateway__CaddyAdminUrl=http://caddy:17202
       - Logging__LogLevel=Information
     depends_on:
       - caddy
@@ -25,9 +25,9 @@ services:
   caddy:
     image: caddy:2-alpine
     ports:
-      - "80:80"
-      - "443:443"
-      - "2019:2019"
+      - "17280:80"
+      - "17243:443"
+      - "17202:2019"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

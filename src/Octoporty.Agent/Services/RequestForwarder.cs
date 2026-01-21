@@ -1,3 +1,9 @@
+// RequestForwarder.cs
+// Forwards tunnel requests to internal services via HttpClient.
+// Supports streaming for large responses (>256KB) using ResponseBodyChunkMessage.
+// Two HttpClient variants: standard (validates certs) and insecure (self-signed only).
+// Strips hop-by-hop headers and adds X-Octoporty-Request-Id for tracing.
+
 using System.Net.Security;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
@@ -232,11 +238,13 @@ public class RequestForwarder
             await using var stream = await httpResponse.Content.ReadAsStreamAsync(ct);
             var buffer = new byte[ChunkSize];
             int bytesRead;
+            long totalBytesRead = 0;
 
             while ((bytesRead = await stream.ReadAsync(buffer, ct)) > 0)
             {
+                totalBytesRead += bytesRead;
                 var chunk = buffer.AsSpan(0, bytesRead).ToArray();
-                var hasMore = stream.Position < (contentLength ?? long.MaxValue);
+                var hasMore = contentLength == null || totalBytesRead < contentLength;
 
                 yield return new ResponseBodyChunkMessage
                 {
@@ -246,13 +254,16 @@ public class RequestForwarder
                 };
             }
 
-            // Ensure we send a final chunk marker
-            yield return new ResponseBodyChunkMessage
+            // Ensure we send a final chunk marker if we didn't send one
+            if (contentLength == null || totalBytesRead < contentLength)
             {
-                RequestId = request.RequestId,
-                Data = [],
-                IsFinal = true
-            };
+                yield return new ResponseBodyChunkMessage
+                {
+                    RequestId = request.RequestId,
+                    Data = [],
+                    IsFinal = true
+                };
+            }
         }
         finally
         {

@@ -1,3 +1,7 @@
+// GetMappingEndpoint.cs
+// Retrieves a single port mapping by ID.
+// Returns 404 if mapping not found.
+
 using FastEndpoints;
 using Microsoft.EntityFrameworkCore;
 using Octoporty.Agent.Data;
@@ -20,7 +24,7 @@ public class GetMappingEndpoint : Endpoint<GetMappingRequest, MappingResponse>
 
     public override void Configure()
     {
-        Get("/api/mappings/{id}");
+        Get("/api/v1/mappings/{id}");
     }
 
     public override async Task HandleAsync(GetMappingRequest req, CancellationToken ct)
@@ -30,14 +34,14 @@ public class GetMappingEndpoint : Endpoint<GetMappingRequest, MappingResponse>
             .Select(m => new MappingResponse
             {
                 Id = m.Id,
+                Name = m.Description ?? m.ExternalDomain,
                 ExternalDomain = m.ExternalDomain,
                 ExternalPort = m.ExternalPort,
                 InternalHost = m.InternalHost,
                 InternalPort = m.InternalPort,
-                InternalUseTls = m.InternalUseTls,
-                AllowSelfSignedCerts = m.AllowSelfSignedCerts,
-                IsEnabled = m.IsEnabled,
-                Description = m.Description,
+                InternalProtocol = m.InternalUseTls ? "Https" : "Http",
+                AllowInvalidCertificates = m.AllowSelfSignedCerts,
+                Enabled = m.IsEnabled,
                 CreatedAt = m.CreatedAt,
                 UpdatedAt = m.UpdatedAt
             })
