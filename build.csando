@@ -3,14 +3,16 @@
 //
 // Profiles:
 // - (default): Build and test only
-// - publish: Build Docker images, push to GHCR, and tag git
+// - publish: Build Docker images, push to GHCR, tag git, and deploy website
+// - docs: Build and deploy website to Cloudflare Pages only
 //
 // Usage:
 //   ando                 # Build and test only
-//   ando -p publish      # Build, test, and push to GHCR
-//   ando release      # Interactive release workflow (bump, build, push, tag)
-//   ando bump         # Bump version (patch by default)
-//   ando bump minor   # Bump minor version
+//   ando -p publish      # Build, test, push to GHCR, and deploy website
+//   ando -p docs         # Build and deploy website to Cloudflare Pages
+//   ando release         # Interactive release workflow (bump, build, push, tag)
+//   ando bump            # Bump version (patch by default)
+//   ando bump minor      # Bump minor version
 //
 // Output:
 // - ghcr.io/aduggleby/octoporty-gateway:{version} - Gateway Docker image
@@ -19,66 +21,92 @@
 
 // Define profiles
 var publish = DefineProfile("publish");
+var docs = DefineProfile("docs");
 
-// Use .NET 10 SDK for building
-Ando.UseImage("mcr.microsoft.com/dotnet/sdk:10.0");
+// Website directory reference
+var websiteDir = Directory("./website");
 
-// Define projects - ando bump will detect these and update versions automatically
-var agentProject = Dotnet.Project("./src/Octoporty.Agent/Octoporty.Agent.csproj");
-var gatewayProject = Dotnet.Project("./src/Octoporty.Gateway/Octoporty.Gateway.csproj");
-
-// Get version from the Agent project (source of truth)
-var version = agentProject.Version;
-Log.Info($"Building version: {version}");
-
-// Restore dependencies for all projects
-Dotnet.Restore(agentProject);
-Dotnet.Restore(gatewayProject);
-
-// Build all projects
-Dotnet.Build(agentProject);
-Dotnet.Build(gatewayProject);
-
-// Install Docker CLI (needed for --dind mode)
-Docker.Install();
-
-// Build and push Docker images when using push profile
-if (publish)
+// Docs-only deployment - skip .NET and Docker builds
+if (docs)
 {
-    // Build with version tag
-    Docker.Build("./src/Octoporty.Gateway/Dockerfile", o => o
-        .WithTag($"octoporty-gateway:{version}")
-        .WithContext("./src"));
+    // Build the Astro website
+    Npm.Install(websiteDir);
+    Npm.Run(websiteDir, "build");
 
-    Docker.Build("./src/Octoporty.Agent/Dockerfile", o => o
-        .WithTag($"octoporty-agent:{version}")
-        .WithContext("./src"));
-
-    // Push Gateway image to GHCR
-    GitHub.PushImage("octoporty-gateway", o => o
-        .WithOwner("aduggleby")
-        .WithTag(version)
-        .WithTag("latest"));
-
-    // Push Agent image to GHCR
-    GitHub.PushImage("octoporty-agent", o => o
-        .WithOwner("aduggleby")
-        .WithTag(version)
-        .WithTag("latest"));
-
-    // Tag the git repo with the version and push
-    Git.Tag($"v{version}", o => o.WithSkipIfExists());
-    Git.Push();
-    Git.PushTags();
+    // Deploy to Cloudflare Pages
+    Cloudflare.EnsureAuthenticated();
+    Cloudflare.PagesDeploy(websiteDir / "dist", "octoporty");
+    Cloudflare.PurgeCache("octoporty.com");
 }
 else
 {
-    // Build with latest tag for local development
-    Docker.Build("./src/Octoporty.Gateway/Dockerfile", o => o
-        .WithTag("octoporty-gateway:latest")
-        .WithContext("./src"));
+    // Use .NET 10 SDK for building
+    Ando.UseImage("mcr.microsoft.com/dotnet/sdk:10.0");
 
-    Docker.Build("./src/Octoporty.Agent/Dockerfile", o => o
-        .WithTag("octoporty-agent:latest")
-        .WithContext("./src"));
+    // Define projects - ando bump will detect these and update versions automatically
+    var agentProject = Dotnet.Project("./src/Octoporty.Agent/Octoporty.Agent.csproj");
+    var gatewayProject = Dotnet.Project("./src/Octoporty.Gateway/Octoporty.Gateway.csproj");
+
+    // Get version from the Agent project (source of truth)
+    var version = agentProject.Version;
+    Log.Info($"Building version: {version}");
+
+    // Restore dependencies for all projects
+    Dotnet.Restore(agentProject);
+    Dotnet.Restore(gatewayProject);
+
+    // Build all projects
+    Dotnet.Build(agentProject);
+    Dotnet.Build(gatewayProject);
+
+    // Install Docker CLI (needed for --dind mode)
+    Docker.Install();
+
+    // Build and push Docker images when using publish profile
+    if (publish)
+    {
+        // Build with version tag
+        Docker.Build("./src/Octoporty.Gateway/Dockerfile", o => o
+            .WithTag($"octoporty-gateway:{version}")
+            .WithContext("./src"));
+
+        Docker.Build("./src/Octoporty.Agent/Dockerfile", o => o
+            .WithTag($"octoporty-agent:{version}")
+            .WithContext("./src"));
+
+        // Push Gateway image to GHCR
+        GitHub.PushImage("octoporty-gateway", o => o
+            .WithOwner("aduggleby")
+            .WithTag(version)
+            .WithTag("latest"));
+
+        // Push Agent image to GHCR
+        GitHub.PushImage("octoporty-agent", o => o
+            .WithOwner("aduggleby")
+            .WithTag(version)
+            .WithTag("latest"));
+
+        // Tag the git repo with the version and push
+        Git.Tag($"v{version}", o => o.WithSkipIfExists());
+        Git.Push();
+        Git.PushTags();
+
+        // Build and deploy website to Cloudflare Pages
+        Npm.Install(websiteDir);
+        Npm.Run(websiteDir, "build");
+        Cloudflare.EnsureAuthenticated();
+        Cloudflare.PagesDeploy(websiteDir / "dist", "octoporty");
+        Cloudflare.PurgeCache("octoporty.com");
+    }
+    else
+    {
+        // Build with latest tag for local development
+        Docker.Build("./src/Octoporty.Gateway/Dockerfile", o => o
+            .WithTag("octoporty-gateway:latest")
+            .WithContext("./src"));
+
+        Docker.Build("./src/Octoporty.Agent/Dockerfile", o => o
+            .WithTag("octoporty-agent:latest")
+            .WithContext("./src"));
+    }
 }

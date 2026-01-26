@@ -249,3 +249,17 @@ Environment variables (see `.env.example`):
 - `Agent__JwtSecret` - JWT signing (min 32 chars)
 - `Agent__Auth__Username/Password` - Web UI credentials
 - `Gateway__CaddyAdminUrl` - Caddy Admin API endpoint
+
+## ANDO Build System
+
+**Build logs** are always saved to `build.csando.log` next to the `build.csando` file.
+
+**Profiles:**
+- `ando` - Build and test only (default)
+- `ando -p publish` - Build, push to GHCR, tag git, deploy website
+- `ando -p docs` - Build and deploy website to Cloudflare Pages only
+- `ando release` - Interactive release workflow
+- `ando bump [patch|minor|major]` - Bump version
+
+**Hooks:**
+- `ando-pre.csando` - Runs before any ando command (cleans Syncthing conflict files)
