@@ -73,7 +73,7 @@ REMOTE
 
 # Create deployment directory
 echo "[3/6] Creating deployment directory..."
-ssh $SSH_OPTS "${SSH_USER}@${SERVER_IP}" "mkdir -p ${REMOTE_DIR}"
+ssh $SSH_OPTS "${SSH_USER}@${SERVER_IP}" "mkdir -p ${REMOTE_DIR} && mkdir -p ${REMOTE_DIR}/data && chmod 755 ${REMOTE_DIR}/data"
 
 # Copy files
 echo "[4/6] Copying deployment files..."
@@ -89,6 +89,9 @@ tar -czf /tmp/octoporty-gateway.tar.gz \
 scp $SSH_OPTS /tmp/octoporty-gateway.tar.gz "${SSH_USER}@${SERVER_IP}:${REMOTE_DIR}/"
 scp $SSH_OPTS "${SCRIPT_DIR}/docker-compose.gateway.yml" "${SSH_USER}@${SERVER_IP}:${REMOTE_DIR}/"
 scp $SSH_OPTS "${SCRIPT_DIR}/Caddyfile" "${SSH_USER}@${SERVER_IP}:${REMOTE_DIR}/"
+scp $SSH_OPTS "${SCRIPT_DIR}/octoporty-updater.sh" "${SSH_USER}@${SERVER_IP}:${REMOTE_DIR}/"
+scp $SSH_OPTS "${SCRIPT_DIR}/octoporty-updater.service" "${SSH_USER}@${SERVER_IP}:/etc/systemd/system/"
+scp $SSH_OPTS "${SCRIPT_DIR}/octoporty-updater.timer" "${SSH_USER}@${SERVER_IP}:/etc/systemd/system/"
 
 # Extract and setup
 echo "[5/6] Setting up on server..."
@@ -106,6 +109,12 @@ ENV
 
 # Rename compose file
 mv docker-compose.gateway.yml docker-compose.yml 2>/dev/null || true
+
+# Setup auto-updater
+chmod +x octoporty-updater.sh
+systemctl daemon-reload
+systemctl enable octoporty-updater.timer
+systemctl start octoporty-updater.timer
 REMOTE
 
 # Build and start
@@ -130,4 +139,7 @@ echo ""
 echo "Agent configuration:"
 echo "  Agent__GatewayUrl=ws://${SERVER_IP}:17200/tunnel"
 echo "  Agent__ApiKey=${API_KEY}"
+echo ""
+echo "Auto-updater is enabled. View status with:"
+echo "  ssh ${SSH_USER}@${SERVER_IP} systemctl status octoporty-updater.timer"
 echo ""

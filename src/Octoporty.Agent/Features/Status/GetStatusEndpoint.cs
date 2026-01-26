@@ -52,10 +52,11 @@ public class GetStatusEndpoint : EndpointWithoutRequest<AgentStatusResponse>
             LastDisconnected = null,
             ReconnectAttempts = 0,
             UptimeSeconds = uptimeSeconds,
-            Version = "1.0.0",
+            Version = TunnelClient.Version,
             ActiveMappings = activeMappings,
             GatewayVersion = _tunnelClient.GatewayVersion,
-            LastError = null // Don't expose error details
+            LastError = null, // Don't expose error details
+            GatewayUpdateAvailable = _tunnelClient.GatewayUpdateAvailable
         }, ct);
     }
 

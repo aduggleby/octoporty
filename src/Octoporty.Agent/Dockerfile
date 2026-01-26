@@ -22,7 +22,7 @@ COPY Octoporty.Agent/ Octoporty.Agent/
 COPY --from=frontend /src/Octoporty.Agent/wwwroot /src/Octoporty.Agent/wwwroot
 
 WORKDIR /src/Octoporty.Agent
-RUN dotnet publish -c Release -o /app/publish --no-restore
+RUN dotnet publish -c Release -o /app/publish
 
 # Stage 3: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS runtime

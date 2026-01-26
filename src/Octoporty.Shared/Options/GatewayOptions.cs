@@ -11,4 +11,16 @@ public class GatewayOptions
     public string CaddyAdminUrl { get; set; } = "http://localhost:17202";
     public int ListenPort { get; set; } = 17200;
     public bool DebugJson { get; set; }
+
+    /// <summary>
+    /// Path to write the update signal file. The host watcher monitors this file
+    /// and triggers docker-compose pull/restart when it appears.
+    /// </summary>
+    public string UpdateSignalPath { get; set; } = "/data/update-signal";
+
+    /// <summary>
+    /// Whether to allow Agents to request Gateway self-updates.
+    /// Disable this if you want to manage updates manually.
+    /// </summary>
+    public bool AllowRemoteUpdate { get; set; } = true;
 }

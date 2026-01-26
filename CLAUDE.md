@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Repository
+
+- **Owner:** aduggleby
+- **Repo:** octoporty
+- **GitHub:** https://github.com/aduggleby/octoporty
+- **Official Website:** https://octoporty.com
+- **Container Registry:** ghcr.io/aduggleby/octoporty-gateway, ghcr.io/aduggleby/octoporty-agent
+- **License:** O'Saasy License (https://osaasy.dev)
+
 ## Build Commands
 
 ```bash
@@ -53,6 +62,7 @@ Internet → Caddy → Gateway (Hetzner) ←WebSocket→ Agent (private network)
 - `TunnelConnectionManager` (Gateway) - Manages active Agent connections, routes requests by Host header
 - `RequestForwarder` (Agent) - Forwards tunnel requests to internal services via HttpClient
 - `CaddyAdminClient` (Gateway) - Manages Caddy routes via Admin API
+- `UpdateService` (Gateway) - Handles self-update requests from Agents, writes signal files for host watcher
 
 ## Technology Stack
 
@@ -187,7 +197,9 @@ tests/Octoporty.Tests.E2E/
 ├── AgentUiTests.cs             # Basic UI smoke tests
 ├── MappingsApiTests.cs         # CRUD API tests
 ├── TunnelConnectivityTests.cs  # Tunnel round-trip tests
-└── ComprehensiveUiTests.cs     # Complete button coverage tests
+├── ComprehensiveUiTests.cs     # Complete button coverage tests
+├── GatewayUpdateApiTests.cs    # Gateway self-update API tests
+└── GatewayUpdateUiTests.cs     # Gateway update banner UI tests
 ```
 
 ### Adding New Features
@@ -196,6 +208,38 @@ When adding ANY new UI feature:
 1. Add corresponding E2E test BEFORE marking feature complete
 2. Test must verify button shows feedback (toast/navigation/state change)
 3. Test must pass in CI before merging
+
+## Large Code Changes Checklist
+
+**CRITICAL: Every significant feature or change MUST include the following:**
+
+1. **Tests** - Write E2E tests for all new functionality
+   - API tests in `tests/Octoporty.Tests.E2E/`
+   - UI tests for any new buttons, forms, or interactive elements
+   - Run tests to verify they pass before marking complete
+
+2. **Documentation** - Update all relevant documentation
+   - `README.md` - Add feature to Features list and relevant sections
+   - Configuration tables if new environment variables are added
+   - API Reference if new endpoints are added
+
+3. **Website** - Update the public website
+   - `website/src/pages/changelog.md` - Add entry for the new version
+   - Include feature description, technical details, and configuration info
+
+4. **CLAUDE.md** - Update this file if:
+   - New build commands are added
+   - Architecture changes
+   - New services or key files are created
+   - Testing patterns change
+
+**What counts as "large"?**
+- New features (not bug fixes)
+- New API endpoints
+- New UI components with user interaction
+- Changes to the tunnel protocol
+- Infrastructure changes
+- Security-related changes
 
 ## Configuration
 

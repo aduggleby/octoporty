@@ -19,6 +19,8 @@ namespace Octoporty.Shared.Contracts;
 [Union(9, typeof(ErrorMessage))]
 [Union(10, typeof(RequestBodyChunkMessage))]
 [Union(11, typeof(ResponseBodyChunkMessage))]
+[Union(12, typeof(UpdateRequestMessage))]
+[Union(13, typeof(UpdateResponseMessage))]
 public abstract class TunnelMessage
 {
     [IgnoreMember]
@@ -240,4 +242,58 @@ public sealed class PortMappingDto
 
     [Key(7)]
     public required bool IsEnabled { get; init; }
+}
+
+/// <summary>
+/// Request from Agent to trigger a Gateway self-update.
+/// Sent when Agent detects it has a newer version than Gateway.
+/// </summary>
+[MessagePackObject]
+public sealed class UpdateRequestMessage : TunnelMessage
+{
+    [IgnoreMember]
+    public override MessageType Type => MessageType.UpdateRequest;
+
+    [Key(0)]
+    public required string TargetVersion { get; init; }
+
+    [Key(1)]
+    public required string RequestedBy { get; init; }
+}
+
+/// <summary>
+/// Response to an update request from the Gateway.
+/// </summary>
+[MessagePackObject]
+public sealed class UpdateResponseMessage : TunnelMessage
+{
+    [IgnoreMember]
+    public override MessageType Type => MessageType.UpdateResponse;
+
+    [Key(0)]
+    public required bool Accepted { get; init; }
+
+    [Key(1)]
+    public string? Error { get; init; }
+
+    [Key(2)]
+    public required string CurrentVersion { get; init; }
+
+    [Key(3)]
+    public required UpdateStatus Status { get; init; }
+}
+
+/// <summary>
+/// Status of an update request.
+/// </summary>
+public enum UpdateStatus : byte
+{
+    /// <summary>Update has been queued and will be processed by host watcher.</summary>
+    Queued = 0,
+
+    /// <summary>Update was rejected (disabled, same version, or other error).</summary>
+    Rejected = 1,
+
+    /// <summary>An update is already queued and pending.</summary>
+    AlreadyQueued = 2
 }

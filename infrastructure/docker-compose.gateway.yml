@@ -13,12 +13,18 @@ services:
     ports:
       # Direct access for testing (bypass Caddy)
       - "17200:17200"
+    volumes:
+      # Bind mount for update signal file (host watcher monitors this)
+      - octoporty_data:/data
     environment:
       # API key for Agent authentication (minimum 32 characters)
       - Gateway__ApiKey=${GATEWAY_API_KEY:?Gateway API key required}
       # Caddy admin API for route management
       - Gateway__CaddyAdminUrl=http://caddy:2019
       - Gateway__ListenPort=17200
+      # Self-update configuration
+      - Gateway__UpdateSignalPath=/data/update-signal
+      - Gateway__AllowRemoteUpdate=${GATEWAY_ALLOW_REMOTE_UPDATE:-true}
       - Logging__MinimumLevel=Information
       - Logging__SeqUrl=${SEQ_URL:-}
     networks:
@@ -60,3 +66,10 @@ networks:
 volumes:
   caddy_data:
   caddy_config:
+  # Shared volume for update signal file between Gateway and host
+  octoporty_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/octoporty/data

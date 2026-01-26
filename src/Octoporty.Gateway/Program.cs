@@ -21,6 +21,7 @@ builder.Services.Configure<LoggingOptions>(builder.Configuration.GetSection("Log
 
 builder.Services.AddSingleton<TunnelConnectionManager>();
 builder.Services.AddSingleton<ITunnelConnectionManager>(sp => sp.GetRequiredService<TunnelConnectionManager>());
+builder.Services.AddSingleton<UpdateService>();
 builder.Services.AddTransient<TunnelWebSocketHandler>();
 builder.Services.AddHttpClient<ICaddyAdminClient, CaddyAdminClient>();
 

@@ -1,0 +1,109 @@
+---
+
+---
+
+<script>
+  // @ts-nocheck
+  // Mobile menu toggle
+  const mobileMenuBtn = document.getElementById("mobile-menu-btn");
+  const mobileMenu = document.getElementById("mobile-menu");
+  mobileMenuBtn?.addEventListener("click", () => {
+    mobileMenu?.classList.toggle("hidden");
+  });
+
+  // Theme toggle functionality with three modes: light, dark, system
+  const themeToggle = document.getElementById("theme-toggle");
+  const mobileThemeToggle = document.getElementById("mobile-theme-toggle");
+  const themeIcon = document.getElementById("theme-icon");
+  const mobileThemeIcon = document.getElementById("mobile-theme-icon");
+  const html = document.documentElement;
+
+  function getSystemTheme() {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+
+  function getSavedTheme() {
+    return localStorage.getItem("theme") || "system";
+  }
+
+  // SVG icons for theme toggle
+  const icons = {
+    light: `<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+      <circle cx="12" cy="12" r="5"></circle>
+      <path stroke-linecap="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+    </svg>`,
+    dark: `<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>`,
+    system: `<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+      <path d="M8 21h8M12 17v4"></path>
+    </svg>`,
+  };
+
+  function applyTheme(theme) {
+    const effectiveTheme = theme === "system" ? getSystemTheme() : theme;
+    if (effectiveTheme === "dark") {
+      html.classList.add("dark");
+    } else {
+      html.classList.remove("dark");
+    }
+    const icon = icons[theme] || icons.system;
+    if (themeIcon) themeIcon.innerHTML = icon;
+    if (mobileThemeIcon) mobileThemeIcon.innerHTML = icon;
+  }
+
+  function setTheme(theme) {
+    localStorage.setItem("theme", theme);
+    applyTheme(theme);
+  }
+
+  // Initialize theme
+  applyTheme(getSavedTheme());
+
+  // Listen for system theme changes
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (getSavedTheme() === "system") {
+      applyTheme("system");
+    }
+  });
+
+  // Cycle through: light -> dark -> system -> light
+  function cycleTheme() {
+    const current = getSavedTheme();
+    const next = current === "light" ? "dark" : current === "dark" ? "system" : "light";
+    setTheme(next);
+  }
+  themeToggle?.addEventListener("click", cycleTheme);
+  mobileThemeToggle?.addEventListener("click", cycleTheme);
+
+  // Copy to clipboard functionality
+  document.querySelectorAll("pre").forEach((block) => {
+    const wrapper = block.parentElement;
+    if (!wrapper.classList.contains("relative")) return;
+
+    const btn = document.createElement("button");
+    btn.className =
+      "absolute top-3 right-3 px-2 py-1 text-xs bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors";
+    btn.textContent = "Copy";
+    wrapper.appendChild(btn);
+
+    btn.addEventListener("click", async () => {
+      const code = block.querySelector("code")?.textContent || "";
+      try {
+        await navigator.clipboard.writeText(code);
+        btn.textContent = "Copied!";
+        btn.classList.add("bg-green-500", "text-white");
+        setTimeout(() => {
+          btn.textContent = "Copy";
+          btn.classList.remove("bg-green-500", "text-white");
+        }, 2000);
+      } catch (err) {
+        btn.textContent = "Error";
+        setTimeout(() => {
+          btn.textContent = "Copy";
+        }, 2000);
+      }
+    });
+  });
+</script>

@@ -1,0 +1,41 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-serif: "Source Serif 4", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+/* Apply serif font to all headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-serif);
+}
+
+/* Force dark theme for all code blocks (consistent appearance in light/dark mode) */
+.prose pre {
+  background-color: var(--shiki-dark-bg, #24292e) !important;
+}
+
+.prose pre code {
+  background-color: transparent !important;
+}
+
+/* Force Shiki dark theme colors for syntax highlighting */
+.prose pre span {
+  color: var(--shiki-dark) !important;
+}
+
+/* Architecture diagram styling */
+.diagram {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  white-space: pre;
+  overflow-x: auto;
+}

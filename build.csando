@@ -3,70 +3,72 @@
 //
 // Profiles:
 // - (default): Build and test only
-// - push: Bump version, build Docker images, push to GHCR, and tag git
+// - publish: Build Docker images, push to GHCR, and tag git
 //
 // Usage:
-//   ando              # Build and test only
-//   ando -p push      # Build, test, bump version, and push to GHCR
-//
-// Prerequisites:
-// - GITHUB_TOKEN env var set (or gh CLI authenticated) for push profile
+//   ando                 # Build and test only
+//   ando -p publish      # Build, test, and push to GHCR
+//   ando release      # Interactive release workflow (bump, build, push, tag)
+//   ando bump         # Bump version (patch by default)
+//   ando bump minor   # Bump minor version
 //
 // Output:
-// - ghcr.io/[owner]/octoporty-gateway:{version} - Gateway Docker image
-// - ghcr.io/[owner]/octoporty-agent:{version}   - Agent Docker image
+// - ghcr.io/aduggleby/octoporty-gateway:{version} - Gateway Docker image
+// - ghcr.io/aduggleby/octoporty-agent:{version}   - Agent Docker image
 // =============================================================================
 
 // Define profiles
-var push = DefineProfile("push");
+var publish = DefineProfile("publish");
 
 // Use .NET 10 SDK for building
 Ando.UseImage("mcr.microsoft.com/dotnet/sdk:10.0");
 
-// Define projects
+// Define projects - ando bump will detect these and update versions automatically
 var agentProject = Dotnet.Project("./src/Octoporty.Agent/Octoporty.Agent.csproj");
 var gatewayProject = Dotnet.Project("./src/Octoporty.Gateway/Octoporty.Gateway.csproj");
 
-// Bump version when pushing (before builds get the new version)
-// Both projects share the same version and are bumped together to stay in sync
-VersionRef? version = null;
-if (push)
-{
-    version = Dotnet.BumpVersion(agentProject);
-    Dotnet.BumpVersion(gatewayProject);
-}
+// Get version from the Agent project (source of truth)
+var version = agentProject.Version;
+Log.Info($"Building version: {version}");
 
 // Restore dependencies for all projects
 Dotnet.Restore(agentProject);
 Dotnet.Restore(gatewayProject);
 
 // Build all projects
-Dotnet.Build(agentProject, o => o.Configuration = Configuration.Release);
-Dotnet.Build(gatewayProject, o => o.Configuration = Configuration.Release);
+Dotnet.Build(agentProject);
+Dotnet.Build(gatewayProject);
 
-// Build Docker images
-// Context is ./src because Dockerfiles expect paths like Octoporty.Shared/, Octoporty.Agent/
-if (push)
+// Install Docker CLI (needed for --dind mode)
+Docker.Install();
+
+// Build and push Docker images when using push profile
+if (publish)
 {
-    // Build with version tag when pushing
-    Docker.Build("./src/Octoporty.Gateway/Dockerfile", "octoporty-gateway", version!, o => o
+    // Build with version tag
+    Docker.Build("./src/Octoporty.Gateway/Dockerfile", o => o
+        .WithTag($"octoporty-gateway:{version}")
         .WithContext("./src"));
 
-    Docker.Build("./src/Octoporty.Agent/Dockerfile", "octoporty-agent", version!, o => o
+    Docker.Build("./src/Octoporty.Agent/Dockerfile", o => o
+        .WithTag($"octoporty-agent:{version}")
         .WithContext("./src"));
 
     // Push Gateway image to GHCR
     GitHub.PushImage("octoporty-gateway", o => o
-        .WithTag(version!)
+        .WithOwner("aduggleby")
+        .WithTag(version)
         .WithTag("latest"));
 
     // Push Agent image to GHCR
     GitHub.PushImage("octoporty-agent", o => o
-        .WithTag(version!)
+        .WithOwner("aduggleby")
+        .WithTag(version)
         .WithTag("latest"));
 
     // Tag the git repo with the version and push
-    Git.Tag(version!);
+    Git.Tag($"v{version}", o => o.WithSkipIfExists());
+    Git.Push();
     Git.PushTags();
 }
 else

@@ -17,5 +17,7 @@ public enum MessageType : byte
     RequestBodyChunk = 9,
     ResponseBodyChunk = 10,
     Disconnect = 11,
+    UpdateRequest = 12,
+    UpdateResponse = 13,
     Error = 255
 }

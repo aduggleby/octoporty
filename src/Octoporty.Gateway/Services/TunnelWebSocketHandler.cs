@@ -17,6 +17,7 @@ public class TunnelWebSocketHandler
 {
     private readonly TunnelConnectionManager _connectionManager;
     private readonly ICaddyAdminClient _caddyClient;
+    private readonly UpdateService _updateService;
     private readonly ILogger<TunnelWebSocketHandler> _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly GatewayOptions _options;
@@ -26,12 +27,14 @@ public class TunnelWebSocketHandler
     public TunnelWebSocketHandler(
         TunnelConnectionManager connectionManager,
         ICaddyAdminClient caddyClient,
+        UpdateService updateService,
         IOptions<GatewayOptions> options,
         ILogger<TunnelWebSocketHandler> logger,
         ILoggerFactory loggerFactory)
     {
         _connectionManager = connectionManager;
         _caddyClient = caddyClient;
+        _updateService = updateService;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _options = options.Value;
@@ -170,6 +173,10 @@ public class TunnelWebSocketHandler
                 _logger.LogInformation("Agent requested disconnect: {Reason}", disconnect.Reason);
                 break;
 
+            case UpdateRequestMessage updateRequest:
+                await HandleUpdateRequestAsync(connection, updateRequest, ct);
+                break;
+
             default:
                 _logger.LogWarning("Unhandled message type: {MessageType}", message.GetType().Name);
                 break;
@@ -229,6 +236,32 @@ public class TunnelWebSocketHandler
             Timestamp = heartbeat.Timestamp,
             ServerTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         }, ct);
+    }
+
+    private async Task HandleUpdateRequestAsync(TunnelConnection connection, UpdateRequestMessage updateRequest, CancellationToken ct)
+    {
+        _logger.LogInformation(
+            "Received update request from {RequestedBy}: target version {TargetVersion}",
+            updateRequest.RequestedBy, updateRequest.TargetVersion);
+
+        var response = await _updateService.RequestUpdateAsync(updateRequest, GatewayVersion, ct);
+
+        await connection.SendAsync(response, ct);
+
+        // If update was accepted and queued, warn the Agent that Gateway will restart soon
+        if (response.Accepted && response.Status == UpdateStatus.Queued)
+        {
+            _logger.LogWarning(
+                "Update queued - Gateway will be restarted by host watcher. " +
+                "Notifying Agent of imminent disconnect.");
+
+            // Give the Agent a heads-up that disconnect is coming
+            // The host watcher typically runs every 30 seconds, so the Agent has time to prepare
+            await connection.SendAsync(new DisconnectMessage
+            {
+                Reason = "Gateway update queued - restart imminent"
+            }, ct);
+        }
     }
 }
 

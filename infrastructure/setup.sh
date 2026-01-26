@@ -60,6 +60,8 @@ fi
 # Create directory structure
 echo "Creating directory structure..."
 mkdir -p "${OCTOPORTY_DIR}"
+mkdir -p "${OCTOPORTY_DIR}/data"
+chmod 755 "${OCTOPORTY_DIR}/data"
 cd "${OCTOPORTY_DIR}"
 
 # Prompt for configuration
@@ -180,6 +182,108 @@ EOF
 systemctl daemon-reload
 systemctl enable octoporty
 
+# Install auto-updater script and systemd units
+echo "Installing Gateway auto-updater..."
+
+# Create auto-updater script
+cat > "${OCTOPORTY_DIR}/octoporty-updater.sh" << 'UPDATER_EOF'
+#!/bin/bash
+# octoporty-updater.sh
+# Host watcher script that checks for Gateway update signal files.
+
+set -euo pipefail
+
+SIGNAL_FILE="${OCTOPORTY_SIGNAL_FILE:-/opt/octoporty/data/update-signal}"
+COMPOSE_DIR="${OCTOPORTY_COMPOSE_DIR:-/opt/octoporty}"
+LOG_TAG="octoporty-updater"
+
+log() {
+    logger -t "$LOG_TAG" "$1"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
+
+# Check if signal file exists
+if [ ! -f "$SIGNAL_FILE" ]; then
+    exit 0
+fi
+
+log "Update signal file found at $SIGNAL_FILE"
+
+# Read signal file contents
+if command -v jq &> /dev/null; then
+    TARGET_VERSION=$(jq -r '.targetVersion // "latest"' "$SIGNAL_FILE" 2>/dev/null || echo "latest")
+    CURRENT_VERSION=$(jq -r '.currentVersion // "unknown"' "$SIGNAL_FILE" 2>/dev/null || echo "unknown")
+    REQUESTED_BY=$(jq -r '.requestedBy // "unknown"' "$SIGNAL_FILE" 2>/dev/null || echo "unknown")
+else
+    TARGET_VERSION="latest"
+    CURRENT_VERSION="unknown"
+    REQUESTED_BY="unknown"
+fi
+
+log "Update requested: $CURRENT_VERSION -> $TARGET_VERSION (by $REQUESTED_BY)"
+
+# Remove signal file immediately
+rm -f "$SIGNAL_FILE"
+log "Signal file removed"
+
+# Change to compose directory
+cd "$COMPOSE_DIR"
+
+# Pull and restart gateway
+log "Pulling Gateway image..."
+docker compose pull gateway 2>&1 | while read line; do log "  $line"; done
+
+log "Restarting Gateway container..."
+docker compose up -d gateway 2>&1 | while read line; do log "  $line"; done
+
+log "Update process completed"
+UPDATER_EOF
+
+chmod +x "${OCTOPORTY_DIR}/octoporty-updater.sh"
+
+# Create systemd service for auto-updater
+cat > /etc/systemd/system/octoporty-updater.service << EOF
+[Unit]
+Description=Octoporty Gateway Auto-Updater
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=${OCTOPORTY_DIR}/octoporty-updater.sh
+Environment=OCTOPORTY_SIGNAL_FILE=${OCTOPORTY_DIR}/data/update-signal
+Environment=OCTOPORTY_COMPOSE_DIR=${OCTOPORTY_DIR}
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=octoporty-updater
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Create systemd timer for auto-updater
+cat > /etc/systemd/system/octoporty-updater.timer << EOF
+[Unit]
+Description=Octoporty Gateway Auto-Updater Timer
+After=docker.service
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+RandomizedDelaySec=5s
+Unit=octoporty-updater.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+# Enable and start the auto-updater timer
+systemctl daemon-reload
+systemctl enable octoporty-updater.timer
+systemctl start octoporty-updater.timer
+echo "Auto-updater timer started"
+
 # Pull images and start
 echo ""
 echo "Pulling Docker images..."
@@ -208,6 +312,11 @@ if curl -sf http://localhost:17200/health > /dev/null 2>&1; then
     echo "  Restart:        systemctl restart octoporty"
     echo "  Stop:           systemctl stop octoporty"
     echo "  Update:         cd ${OCTOPORTY_DIR} && docker compose pull && systemctl restart octoporty"
+    echo ""
+    echo "Auto-updater:"
+    echo "  View timer:     systemctl status octoporty-updater.timer"
+    echo "  View logs:      journalctl -u octoporty-updater -f"
+    echo "  Manual trigger: systemctl start octoporty-updater"
     echo ""
 else
     echo ""

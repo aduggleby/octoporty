@@ -8,6 +8,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import clsx from 'clsx'
 import { ConnectionStatusBadge } from './ConnectionStatus'
+import { GatewayUpdateBanner } from './GatewayUpdateBanner'
 import { useSignalR } from '../hooks/useSignalR'
 import { api } from '../api/client'
 import type { AgentStatus, StatusUpdate } from '../types'
@@ -178,6 +179,19 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main Content */}
       <main className="main-content">
+        {/* Gateway Update Banner */}
+        {status && (
+          <GatewayUpdateBanner
+            agentVersion={status.version}
+            gatewayVersion={status.gatewayVersion}
+            visible={status.gatewayUpdateAvailable}
+            onUpdateTriggered={() => {
+              // Refresh status after update is triggered
+              api.getStatus().then(setStatus).catch(console.error)
+            }}
+          />
+        )}
+
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

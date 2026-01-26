@@ -16,4 +16,10 @@ public record AgentStatusResponse
     public int ActiveMappings { get; init; }
     public string? GatewayVersion { get; init; }
     public string? LastError { get; init; }
+
+    /// <summary>
+    /// Indicates whether the Agent version is newer than the Gateway version.
+    /// When true, the user can trigger a Gateway update from the UI.
+    /// </summary>
+    public bool GatewayUpdateAvailable { get; init; }
 }

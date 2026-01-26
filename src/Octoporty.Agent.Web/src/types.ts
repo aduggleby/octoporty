@@ -44,6 +44,8 @@ export interface AgentStatus {
   uptime: number | null
   version: string
   activeMappings: number
+  gatewayVersion?: string | null
+  gatewayUpdateAvailable: boolean
 }
 
 export interface ApiError {
@@ -89,4 +91,16 @@ export interface Toast {
   title: string
   message?: string
   duration?: number
+}
+
+// Gateway Update types
+export type UpdateStatus = 'Queued' | 'Rejected' | 'AlreadyQueued'
+
+export interface TriggerUpdateResponse {
+  success: boolean
+  message: string
+  error?: string
+  agentVersion: string
+  gatewayVersion?: string
+  status?: UpdateStatus
 }

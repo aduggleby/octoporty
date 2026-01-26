@@ -31,6 +31,7 @@ public class TunnelClient : BackgroundService
     private Task? _sendTask;
     private Task? _heartbeatTask;
     private TaskCompletionSource<ConfigAckMessage>? _pendingConfigAck;
+    private TaskCompletionSource<UpdateResponseMessage>? _pendingUpdateResponse;
 
     private const string AgentVersion = "1.0.0";
     private const int HeartbeatIntervalSeconds = 30;
@@ -39,6 +40,12 @@ public class TunnelClient : BackgroundService
     public DateTime? LastConnectedAt { get; private set; }
     public string? LastError { get; private set; }
     public string? GatewayVersion { get; private set; }
+
+    /// <summary>
+    /// Indicates whether the Agent version is newer than the Gateway version.
+    /// When true, the user can trigger a Gateway update from the UI.
+    /// </summary>
+    public bool GatewayUpdateAvailable { get; private set; }
 
     public event Action<TunnelClientState>? StateChanged;
 
@@ -167,6 +174,17 @@ public class TunnelClient : BackgroundService
             {
                 GatewayVersion = authResult.GatewayVersion;
                 _logger.LogInformation("Authenticated successfully (Gateway v{Version})", GatewayVersion);
+
+                // Compare versions to determine if Gateway update is available
+                // Agent can trigger update if it has a newer version than Gateway
+                GatewayUpdateAvailable = CompareVersions(AgentVersion, GatewayVersion) > 0;
+                if (GatewayUpdateAvailable)
+                {
+                    _logger.LogInformation(
+                        "Gateway update available: Agent v{AgentVersion} > Gateway v{GatewayVersion}",
+                        AgentVersion, GatewayVersion);
+                }
+
                 return true;
             }
 
@@ -426,6 +444,13 @@ public class TunnelClient : BackgroundService
                 _pendingConfigAck?.TrySetResult(configAck);
                 break;
 
+            case UpdateResponseMessage updateResponse:
+                _logger.LogInformation(
+                    "Update response received: Accepted={Accepted}, Status={Status}",
+                    updateResponse.Accepted, updateResponse.Status);
+                _pendingUpdateResponse?.TrySetResult(updateResponse);
+                break;
+
             case DisconnectMessage disconnect:
                 _logger.LogWarning("Gateway requested disconnect: {Reason}", disconnect.Reason);
                 await _connectionCts!.CancelAsync();
@@ -514,4 +539,102 @@ public class TunnelClient : BackgroundService
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(json));
         return Convert.ToHexString(hash)[..16];
     }
+
+    /// <summary>
+    /// Requests the Gateway to update itself to the Agent's version.
+    /// The Gateway will write a signal file for the host watcher to process.
+    /// </summary>
+    /// <returns>The update response from the Gateway.</returns>
+    /// <exception cref="InvalidOperationException">If not connected or no update is available.</exception>
+    public async Task<UpdateResponseMessage> RequestGatewayUpdateAsync(CancellationToken ct = default)
+    {
+        if (State != TunnelClientState.Connected)
+        {
+            throw new InvalidOperationException("Cannot request update - not connected to Gateway");
+        }
+
+        if (!GatewayUpdateAvailable)
+        {
+            throw new InvalidOperationException("No Gateway update available - versions are the same or Gateway is newer");
+        }
+
+        _logger.LogInformation("Requesting Gateway update to version {Version}", AgentVersion);
+
+        // Set up the pending response before sending
+        _pendingUpdateResponse = new TaskCompletionSource<UpdateResponseMessage>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var updateRequest = new UpdateRequestMessage
+        {
+            TargetVersion = AgentVersion,
+            RequestedBy = $"Agent@{Environment.MachineName}"
+        };
+
+        // Send through the outbound channel
+        await _outboundChannel.Writer.WriteAsync(updateRequest, ct);
+
+        // Wait for response with timeout
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+
+        try
+        {
+            var response = await _pendingUpdateResponse.Task.WaitAsync(linkedCts.Token);
+
+            if (response.Accepted && response.Status == UpdateStatus.Queued)
+            {
+                // Update is queued - Gateway will restart soon
+                // The GatewayUpdateAvailable flag will be re-evaluated on reconnect
+                _logger.LogInformation("Gateway update queued successfully. Gateway will restart soon.");
+            }
+
+            return response;
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+        {
+            throw new TimeoutException("Timeout waiting for update response from Gateway");
+        }
+        finally
+        {
+            _pendingUpdateResponse = null;
+        }
+    }
+
+    /// <summary>
+    /// Compares two semantic version strings.
+    /// Returns positive if version1 > version2, negative if version1 < version2, zero if equal.
+    /// </summary>
+    private static int CompareVersions(string? version1, string? version2)
+    {
+        if (string.IsNullOrEmpty(version1) && string.IsNullOrEmpty(version2))
+            return 0;
+        if (string.IsNullOrEmpty(version1))
+            return -1;
+        if (string.IsNullOrEmpty(version2))
+            return 1;
+
+        // Parse semantic version (major.minor.patch)
+        var v1Parts = version1.Split('.').Select(p => int.TryParse(p, out var n) ? n : 0).ToArray();
+        var v2Parts = version2.Split('.').Select(p => int.TryParse(p, out var n) ? n : 0).ToArray();
+
+        // Ensure both have at least 3 parts
+        Array.Resize(ref v1Parts, 3);
+        Array.Resize(ref v2Parts, 3);
+
+        // Compare major, minor, patch in order
+        for (int i = 0; i < 3; i++)
+        {
+            if (v1Parts[i] > v2Parts[i])
+                return 1;
+            if (v1Parts[i] < v2Parts[i])
+                return -1;
+        }
+
+        return 0;
+    }
+
+    /// <summary>
+    /// Gets the current Agent version.
+    /// </summary>
+    public static string Version => AgentVersion;
 }

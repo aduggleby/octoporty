@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   gateway:
-    image: ghcr.io/${GITHUB_REPOSITORY:-octoporty}/gateway:${VERSION:-latest}
+    image: ghcr.io/aduggleby/octoporty-gateway:${VERSION:-latest}
     build:
       context: ../src
       dockerfile: Octoporty.Gateway/Dockerfile

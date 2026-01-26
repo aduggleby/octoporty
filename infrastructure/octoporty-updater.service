@@ -1,0 +1,37 @@
+# octoporty-updater.service
+# Systemd oneshot service for the Octoporty Gateway auto-updater.
+# Checks for update signal files and performs docker-compose pull/restart.
+# Triggered by octoporty-updater.timer every 30 seconds.
+
+[Unit]
+Description=Octoporty Gateway Auto-Updater
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/octoporty/octoporty-updater.sh
+
+# Environment configuration
+Environment=OCTOPORTY_SIGNAL_FILE=/opt/octoporty/data/update-signal
+Environment=OCTOPORTY_COMPOSE_DIR=/opt/octoporty
+
+# Security hardening
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+
+# Allow write access to /opt/octoporty for signal file removal
+ReadWritePaths=/opt/octoporty/data
+
+# Allow docker socket access
+SupplementaryGroups=docker
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=octoporty-updater
+
+[Install]
+WantedBy=multi-user.target

@@ -104,7 +104,7 @@ public class TestBase : PageTest
 
         // Check if already logged in (look for sidebar nav or Sign Out)
         var isLoggedIn = await Page.Locator("text=Sign Out").IsVisibleAsync() ||
-                         await Page.Locator("text=Control Panel").IsVisibleAsync();
+                         await Page.Locator("text=Quick Actions").IsVisibleAsync();
         if (isLoggedIn)
             return;
 

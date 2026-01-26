@@ -10,6 +10,7 @@ import type {
   LoginRequest,
   LoginResponse,
   ApiError,
+  TriggerUpdateResponse,
 } from '../types'
 
 const API_BASE = '/api/v1'
@@ -103,6 +104,17 @@ class ApiClient {
 
   async reconnect(): Promise<void> {
     return this.request('/reconnect', { method: 'POST' })
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Gateway
+  // ─────────────────────────────────────────────────────────────────────────
+
+  async triggerGatewayUpdate(force: boolean = false): Promise<TriggerUpdateResponse> {
+    return this.request<TriggerUpdateResponse>('/gateway/update', {
+      method: 'POST',
+      body: JSON.stringify({ force }),
+    })
   }
 
   // ─────────────────────────────────────────────────────────────────────────

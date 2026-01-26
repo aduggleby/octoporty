@@ -1,0 +1,27 @@
+# octoporty-updater.timer
+# Systemd timer that triggers the Octoporty Gateway auto-updater.
+# Runs every 30 seconds to check for update signal files.
+# The Gateway writes a signal file when an Agent requests an update.
+
+[Unit]
+Description=Octoporty Gateway Auto-Updater Timer
+After=docker.service
+
+[Timer]
+# Run 30 seconds after boot
+OnBootSec=30s
+
+# Run every 30 seconds
+OnUnitActiveSec=30s
+
+# Randomize the execution time slightly to avoid thundering herd
+RandomizedDelaySec=5s
+
+# The service to trigger
+Unit=octoporty-updater.service
+
+# Make the timer persistent across reboots
+Persistent=true
+
+[Install]
+WantedBy=timers.target
