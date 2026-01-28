@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.17
+
+**2026-01-28**
+
+- Improve version display in Docker containers
+
+---
+
 ## 0.9.16
 
 **2026-01-28**
