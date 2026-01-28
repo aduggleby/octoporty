@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.21
+
+**2026-01-28**
+
+- Add support for ARM64 architecture (e.g., Raspberry Pi, Apple Silicon)
+
+---
+
 ## 0.9.20
 
 **2026-01-28**
