@@ -8,6 +8,7 @@ set -e
 
 INSTALL_DIR="/opt/octoporty/gateway"
 SCRIPT_VERSION="0.9.15"
+IMAGE="ghcr.io/aduggleby/octoporty-gateway:latest"
 
 cat << 'EOF'
 
@@ -43,27 +44,79 @@ if [ ! -f "docker-compose.yml" ]; then
     exit 1
 fi
 
-echo "Updating Octoporty Gateway..."
+echo "Checking for updates..."
 echo ""
 
-# Get current image digest
-CURRENT_DIGEST=$(docker inspect ghcr.io/aduggleby/octoporty-gateway:latest --format='{{.Id}}' 2>/dev/null || echo "none")
+# Get current local image info
+# Try to get version from label, fall back to image ID
+CURRENT_VERSION=$(docker inspect "$IMAGE" --format='{{index .Config.Labels "org.opencontainers.image.version"}}' 2>/dev/null || echo "")
+if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "<no value>" ]; then
+    CURRENT_VERSION="unknown"
+fi
+CURRENT_DIGEST=$(docker inspect "$IMAGE" --format='{{.Id}}' 2>/dev/null | cut -c8-19 || echo "not installed")
+CURRENT_CREATED=$(docker inspect "$IMAGE" --format='{{.Created}}' 2>/dev/null | cut -c1-19 | tr 'T' ' ' || echo "unknown")
 
-# Pull latest images
-echo "Pulling latest images..."
-docker compose pull
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║  Current Installation                                         ║"
+echo "╠═══════════════════════════════════════════════════════════════╣"
+printf "║  Version:     %-46s ║\n" "$CURRENT_VERSION"
+printf "║  Image ID:    %-46s ║\n" "$CURRENT_DIGEST"
+printf "║  Built:       %-46s ║\n" "$CURRENT_CREATED"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo ""
 
-# Get new image digest
-NEW_DIGEST=$(docker inspect ghcr.io/aduggleby/octoporty-gateway:latest --format='{{.Id}}' 2>/dev/null || echo "none")
+# Pull latest image to check for updates
+echo "Fetching latest version from registry..."
+docker pull "$IMAGE" --quiet > /dev/null 2>&1 || docker pull "$IMAGE"
 
+# Get new image info
+NEW_VERSION=$(docker inspect "$IMAGE" --format='{{index .Config.Labels "org.opencontainers.image.version"}}' 2>/dev/null || echo "")
+if [ -z "$NEW_VERSION" ] || [ "$NEW_VERSION" = "<no value>" ]; then
+    NEW_VERSION="unknown"
+fi
+NEW_DIGEST=$(docker inspect "$IMAGE" --format='{{.Id}}' 2>/dev/null | cut -c8-19 || echo "unknown")
+NEW_CREATED=$(docker inspect "$IMAGE" --format='{{.Created}}' 2>/dev/null | cut -c1-19 | tr 'T' ' ' || echo "unknown")
+
+echo ""
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║  Latest Available                                             ║"
+echo "╠═══════════════════════════════════════════════════════════════╣"
+printf "║  Version:     %-46s ║\n" "$NEW_VERSION"
+printf "║  Image ID:    %-46s ║\n" "$NEW_DIGEST"
+printf "║  Built:       %-46s ║\n" "$NEW_CREATED"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo ""
+
+# Compare digests (more reliable than version for detecting changes)
 if [ "$CURRENT_DIGEST" = "$NEW_DIGEST" ]; then
+    echo "✓ You are already running the latest version ($CURRENT_VERSION)."
     echo ""
-    echo "Already running the latest version."
+    exit 0
+fi
+
+echo "╔═══════════════════════════════════════════════════════════════╗"
+if [ "$CURRENT_VERSION" != "unknown" ] && [ "$NEW_VERSION" != "unknown" ]; then
+    printf "║  Update Available: %-40s ║\n" "$CURRENT_VERSION → $NEW_VERSION"
+else
+    echo "║  Update Available!                                            ║"
+fi
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo ""
+echo "This will restart the Gateway service, causing a brief interruption"
+echo "to any active tunnel connections."
+echo ""
+read -p "Do you want to apply this update? [Y/n] " -n 1 -r < /dev/tty
+echo ""
+
+if [[ $REPLY =~ ^[Nn]$ ]]; then
+    echo ""
+    echo "Update cancelled. The new image has been downloaded but not applied."
+    echo "Run this script again when ready to update."
     exit 0
 fi
 
 echo ""
-echo "New version available. Restarting services..."
+echo "Applying update..."
 
 # Restart services
 docker compose down
@@ -78,7 +131,7 @@ sleep 5
 if docker compose ps | grep -q "running"; then
     echo ""
     echo "╔═══════════════════════════════════════════════════════════════╗"
-    echo "║           Update Complete!                                    ║"
+    printf "║  Update Complete! Now running %-29s ║\n" "v$NEW_VERSION"
     echo "╚═══════════════════════════════════════════════════════════════╝"
     echo ""
     docker compose ps

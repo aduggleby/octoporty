@@ -54,6 +54,14 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},value=${{ steps.version.outputs.version }}
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Extract version number
+        id: extract_version
+        run: |
+          # Remove 'v' prefix if present (v1.0.0 -> 1.0.0)
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION="${VERSION#v}"
+          echo "version_number=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -62,6 +70,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.extract_version.outputs.version_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
@@ -104,6 +114,14 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},value=${{ steps.version.outputs.version }}
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Extract version number
+        id: extract_version
+        run: |
+          # Remove 'v' prefix if present (v1.0.0 -> 1.0.0)
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION="${VERSION#v}"
+          echo "version_number=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -112,6 +130,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.extract_version.outputs.version_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
