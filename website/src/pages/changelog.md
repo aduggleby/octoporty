@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.22
+
+**2026-01-28**
+
+- Version bump for release consistency
+
+---
+
 ## 0.9.21
 
 **2026-01-28**
