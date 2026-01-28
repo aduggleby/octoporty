@@ -328,9 +328,22 @@ echo "╔═══════════════════════�
 echo "║           Installation Complete!                              ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo ""
-echo "Start the Gateway:"
-echo "  cd $INSTALL_DIR && docker compose up -d"
+
+# Ask if user wants to start the gateway
+read -p "Would you like to start the Gateway now? [Y/n] " -n 1 -r < /dev/tty
 echo ""
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+    echo "Starting Gateway..."
+    docker compose up -d
+    echo ""
+    echo "Gateway is running!"
+    echo ""
+else
+    echo "To start the Gateway later, run:"
+    echo "  cd $INSTALL_DIR && docker compose up -d"
+    echo ""
+fi
+
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║  Save these details for Agent installation                    ║"
 echo "╠═══════════════════════════════════════════════════════════════╣"

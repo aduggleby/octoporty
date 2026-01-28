@@ -42,12 +42,9 @@ The Agent installer will prompt for the Gateway URL and API key (provided by the
 | Platform | Guide |
 |----------|-------|
 | **TrueNAS Scale** | [TrueNAS Installation Guide](/truenas) |
-
-### Coming Soon
-
-- Synology DSM
-- Unraid
-- QNAP
+| **Synology DSM** | [Synology Installation Guide](/synology) |
+| **Unraid** | [Unraid Installation Guide](/unraid) |
+| **QNAP** | [QNAP Installation Guide](/qnap) |
 
 ---
 
