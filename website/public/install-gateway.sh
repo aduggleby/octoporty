@@ -1,7 +1,7 @@
 #!/bin/bash
 # install-gateway.sh
 # Octoporty Gateway installation script
-# Version: 0.9.14
+# Version: 0.9.15
 # Usage: curl -fsSL https://octoporty.com/install-gateway.sh | bash
 
 set -e
@@ -10,7 +10,7 @@ INSTALL_DIR="/opt/octoporty/gateway"
 COMPOSE_FILE="docker-compose.yml"
 ENV_FILE=".env"
 CADDYFILE="Caddyfile"
-SCRIPT_VERSION="0.9.14"
+SCRIPT_VERSION="0.9.15"
 
 cat << 'EOF'
 

@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.15
+
+**2026-01-28**
+
+- Add startup banner showing configuration details when services start
+
+---
+
 ## 0.9.14
 
 **2026-01-28**

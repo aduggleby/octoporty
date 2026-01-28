@@ -49,6 +49,7 @@ Octoporty is a self-hosted alternative to ngrok that lets you expose internal se
 - **Gateway Self-Update** - Update the Gateway from the Agent UI when version mismatch is detected
 - **Request Logging** - Audit trail for all tunneled requests
 - **Rate Limiting** - Built-in protection against brute force attacks
+- **Startup Banner** - Visual configuration display at startup with obfuscated secrets for easy verification
 - **Docker Ready** - Chiseled container images for minimal attack surface
 
 ## Architecture
@@ -472,6 +473,29 @@ Content-Type: application/json
 2. Check for rate limiting lockout
 3. Ensure JWT secret is configured
 4. Clear browser cookies and try again
+
+### Startup Banner
+
+When the Gateway or Agent starts, it displays a startup banner with the current configuration. This helps verify that environment variables are loaded correctly. Sensitive values (API keys, passwords, secrets) are obfuscated, showing only the first 2 and last 2 characters.
+
+Example Agent output:
+```
+   ██████╗  ██████╗████████╗ ██████╗ ██████╗  ██████╗ ██████╗ ████████╗██╗   ██╗
+  ██╔═══██╗██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝╚██╗ ██╔╝
+  ██║   ██║██║        ██║   ██║   ██║██████╔╝██║   ██║██████╔╝   ██║    ╚████╔╝
+  ██║   ██║██║        ██║   ██║   ██║██╔═══╝ ██║   ██║██╔══██╗   ██║     ╚██╔╝
+  ╚██████╔╝╚██████╗   ██║   ╚██████╔╝██║     ╚██████╔╝██║  ██║   ██║      ██║
+   ╚═════╝  ╚═════╝   ╚═╝    ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═╝
+
+  Agent v0.9.15
+  ─────────────────────────────────────────────────────────────────────────
+  GatewayUrl    : wss://gateway.example.com/tunnel
+  ApiKey        : my****ey
+  JwtSecret     : se****et
+  Username      : admin
+  Password      : pa****rd
+  Environment   : Production
+```
 
 ### Logs
 
