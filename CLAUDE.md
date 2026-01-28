@@ -263,3 +263,13 @@ Environment variables (see `.env.example`):
 
 **Hooks:**
 - `ando-pre.csando` - Runs before any ando command (cleans Syncthing conflict files)
+
+## Versioning Requirements
+
+**When creating a new version, you MUST update:**
+
+1. **Project versions** - `src/Octoporty.Agent/Octoporty.Agent.csproj` and `src/Octoporty.Gateway/Octoporty.Gateway.csproj`
+2. **Website index page** - Update the version badge in `website/src/pages/index.astro` (links to changelog)
+3. **Changelog** - Add entry in `website/src/pages/changelog.md` with date and changes
+
+The website index page displays the current version as a badge that links to the changelog. This must always match the latest release version.
