@@ -33,9 +33,10 @@ echo ""
 
 echo "This script will:"
 echo "  • Check and optionally install Docker and Docker Compose"
+echo "  • Ask for your gateway domain (for Agent connections)"
 echo "  • Create installation directory at $INSTALL_DIR"
 echo "  • Generate a secure API key for Agent authentication"
-echo "  • Create Docker Compose and Caddy configuration files"
+echo "  • Configure Caddy with your gateway domain"
 echo "  • Pull the Octoporty Gateway Docker image"
 echo ""
 read -p "Do you want to continue? [Y/n] " -n 1 -r < /dev/tty
@@ -217,13 +218,31 @@ fi
 echo "Docker and Docker Compose are installed."
 echo ""
 
+# Ask for gateway domain
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║  Gateway Domain Configuration                                 ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
+echo ""
+echo "The Gateway needs a domain name that Agents will connect to."
+echo "This domain should point to this server's public IP address."
+echo ""
+echo "Example: gateway.yourdomain.com"
+echo ""
+read -p "Enter your gateway domain: " GATEWAY_DOMAIN < /dev/tty
+echo ""
+
+if [ -z "$GATEWAY_DOMAIN" ]; then
+    echo "Error: Gateway domain is required."
+    exit 1
+fi
+
 # Create installation directory
 echo "Creating installation directory: $INSTALL_DIR"
 sudo mkdir -p "$INSTALL_DIR"
 sudo chown $(id -u):$(id -g) "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-# Generate secure API key if not exists
+# Generate secure API key if not exists, or read existing one
 if [ ! -f "$ENV_FILE" ]; then
     echo "Generating secure API key..."
     API_KEY=$(openssl rand -base64 32 | tr -d '/+=' | head -c 32)
@@ -240,13 +259,10 @@ CADDY_ADMIN_URL=http://caddy:2019
 EOF
 
     echo "Created $ENV_FILE"
-    echo ""
-    echo "╔═══════════════════════════════════════════════════════════════╗"
-    echo "║  SAVE THIS API KEY - You'll need it for Agent installation   ║"
-    echo "╠═══════════════════════════════════════════════════════════════╣"
-    printf "║  %-59s  ║\n" "$API_KEY"
-    echo "╚═══════════════════════════════════════════════════════════════╝"
-    echo ""
+else
+    # Read existing API key
+    API_KEY=$(grep GATEWAY_API_KEY "$ENV_FILE" | cut -d'=' -f2)
+    echo "Using existing API key from $ENV_FILE"
 fi
 
 # Create docker-compose.yml
@@ -283,28 +299,24 @@ volumes:
   caddy_config:
 EOF
 
-# Create Caddyfile if not exists
-if [ ! -f "$CADDYFILE" ]; then
-    echo "Creating Caddyfile..."
-    cat > "$CADDYFILE" << 'EOF'
+# Create Caddyfile with the configured domain
+echo "Creating Caddyfile for $GATEWAY_DOMAIN..."
+cat > "$CADDYFILE" << EOF
 {
     admin :2019
 }
 
-# Gateway WebSocket endpoint - REQUIRED
-# Replace gateway.yourdomain.com with your actual domain
-# This is needed for Agents to connect to the Gateway
-#
-# gateway.yourdomain.com {
-#     reverse_proxy gateway:17200
-# }
+# Gateway WebSocket endpoint
+# Agents connect to this domain to establish the tunnel
+$GATEWAY_DOMAIN {
+    reverse_proxy gateway:17200
+}
 
 # NOTE: Tunnel routes for your services are configured automatically
 # via the Agent web UI. You do NOT need to manually add them here.
 # The Gateway updates Caddy dynamically via the Admin API.
 EOF
-    echo "Created $CADDYFILE"
-fi
+echo "Created $CADDYFILE"
 
 # Pull images
 echo ""
@@ -316,18 +328,30 @@ echo "╔═══════════════════════�
 echo "║           Installation Complete!                              ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo ""
-echo "Next steps:"
-echo "  1. Edit $INSTALL_DIR/$CADDYFILE to add your gateway domain"
-echo "     (e.g., gateway.yourdomain.com pointing to gateway:17200)"
+echo "Start the Gateway:"
+echo "  cd $INSTALL_DIR && docker compose up -d"
 echo ""
-echo "  2. Start the Gateway:"
-echo "     cd $INSTALL_DIR && docker compose up -d"
+echo "╔═══════════════════════════════════════════════════════════════╗"
+echo "║  Save these details for Agent installation                    ║"
+echo "╠═══════════════════════════════════════════════════════════════╣"
+echo "║                                                               ║"
+echo "║  Gateway Domain:                                              ║"
+printf "║    %-56s   ║\n" "$GATEWAY_DOMAIN"
+echo "║                                                               ║"
+echo "║  API Key:                                                     ║"
+printf "║    %-56s   ║\n" "$API_KEY"
+echo "║                                                               ║"
+echo "╠═══════════════════════════════════════════════════════════════╣"
+echo "║  Install Agent on your private network server:                ║"
+echo "║                                                               ║"
+echo "║    curl -fsSL https://octoporty.com/install-agent.sh | bash   ║"
+echo "║                                                               ║"
+echo "╠═══════════════════════════════════════════════════════════════╣"
+echo "║  Full installation docs: octoporty.com/installation           ║"
+echo "╚═══════════════════════════════════════════════════════════════╝"
 echo ""
-echo "  3. Install the Agent on your private network server"
-echo "     using the API key from $INSTALL_DIR/$ENV_FILE"
-echo ""
-echo "  Note: Tunnel routes for your services are configured automatically"
-echo "  via the Agent web UI - no manual Caddy configuration needed."
+echo "Note: Tunnel routes for your services are configured automatically"
+echo "via the Agent web UI - no manual Caddy configuration needed."
 echo ""
 echo "Documentation: https://octoporty.com"
 echo "GitHub: https://github.com/aduggleby/octoporty"

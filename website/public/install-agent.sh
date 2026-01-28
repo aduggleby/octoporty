@@ -292,6 +292,8 @@ docker compose pull
 echo ""
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║           Installation Complete!                              ║"
+echo "╠═══════════════════════════════════════════════════════════════╣"
+echo "║  Full installation docs: octoporty.com/installation           ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo ""
 echo "Next steps:"
