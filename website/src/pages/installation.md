@@ -11,7 +11,11 @@ Octoporty consists of two components:
 
 ## Quick Install (Linux)
 
-The fastest way to get started on Linux servers:
+The fastest way to get started on Linux servers. The install scripts are interactive and will:
+- Check and optionally install Docker and Docker Compose
+- Prompt for required configuration (domain, API key, etc.)
+- Generate secure credentials automatically
+- Create all necessary configuration files
 
 **Gateway (on your public server):**
 
@@ -19,11 +23,15 @@ The fastest way to get started on Linux servers:
 curl -fsSL https://octoporty.com/install-gateway.sh | bash
 ```
 
+The Gateway installer will ask for your gateway domain (e.g., `gateway.yourdomain.com`) and automatically configure Caddy with HTTPS. At the end, it displays the API key you'll need for the Agent installation.
+
 **Agent (on your private network):**
 
 ```bash
 curl -fsSL https://octoporty.com/install-agent.sh | bash
 ```
+
+The Agent installer will prompt for the Gateway URL and API key (provided by the Gateway installer).
 
 ---
 

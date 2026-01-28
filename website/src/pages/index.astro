@@ -6,10 +6,8 @@ const quickStartGateway = `# SSH into your cloud server
 ssh user@your-gateway-server.com
 
 # Download and run the Gateway installer
+# (prompts for domain, generates API key automatically)
 curl -fsSL https://octoporty.com/install-gateway.sh | bash
-
-# Edit configuration
-nano /opt/octoporty/gateway/.env
 
 # Start the Gateway
 cd /opt/octoporty/gateway && docker compose up -d`;
@@ -18,10 +16,8 @@ const quickStartAgent = `# SSH into your private network server
 ssh user@your-internal-server.com
 
 # Download and run the Agent installer
+# (prompts for Gateway URL and API key from Gateway install)
 curl -fsSL https://octoporty.com/install-agent.sh | bash
-
-# Edit configuration
-nano /opt/octoporty/agent/.env
 
 # Start the Agent
 cd /opt/octoporty/agent && docker compose up -d`;
