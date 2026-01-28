@@ -12,7 +12,20 @@ using Octoporty.Gateway.Services;
 using Octoporty.Shared.Logging;
 using Octoporty.Shared.Options;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory
+});
+
+// Disable config file watchers - required for read-only containers (chiseled images)
+// The default reloadOnChange: true requires write access to set up file watchers
+builder.Configuration.Sources.Clear();
+builder.Configuration
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
+    .AddEnvironmentVariables();
 
 builder.Host.UseOctoportySerilog("Octoporty.Gateway");
 
