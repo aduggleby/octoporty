@@ -59,9 +59,9 @@ CURRENT_CREATED=$(docker inspect "$IMAGE" --format='{{.Created}}' 2>/dev/null | 
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║  Current Installation                                         ║"
 echo "╠═══════════════════════════════════════════════════════════════╣"
-printf "║  Version:     %-46s ║\n" "$CURRENT_VERSION"
-printf "║  Image ID:    %-46s ║\n" "$CURRENT_DIGEST"
-printf "║  Built:       %-46s ║\n" "$CURRENT_CREATED"
+printf "║  Version:     %-47s║\n" "$CURRENT_VERSION"
+printf "║  Image ID:    %-47s║\n" "$CURRENT_DIGEST"
+printf "║  Built:       %-47s║\n" "$CURRENT_CREATED"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -81,9 +81,9 @@ echo ""
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║  Latest Available                                             ║"
 echo "╠═══════════════════════════════════════════════════════════════╣"
-printf "║  Version:     %-46s ║\n" "$NEW_VERSION"
-printf "║  Image ID:    %-46s ║\n" "$NEW_DIGEST"
-printf "║  Built:       %-46s ║\n" "$NEW_CREATED"
+printf "║  Version:     %-47s║\n" "$NEW_VERSION"
+printf "║  Image ID:    %-47s║\n" "$NEW_DIGEST"
+printf "║  Built:       %-47s║\n" "$NEW_CREATED"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -96,7 +96,7 @@ fi
 
 echo "╔═══════════════════════════════════════════════════════════════╗"
 if [ "$CURRENT_VERSION" != "unknown" ] && [ "$NEW_VERSION" != "unknown" ]; then
-    printf "║  Update Available: %-40s ║\n" "$CURRENT_VERSION → $NEW_VERSION"
+    printf "║  Update Available: %-42s║\n" "$CURRENT_VERSION → $NEW_VERSION"
 else
     echo "║  Update Available!                                            ║"
 fi
@@ -131,7 +131,7 @@ sleep 5
 if docker compose ps | grep -q "running"; then
     echo ""
     echo "╔═══════════════════════════════════════════════════════════════╗"
-    printf "║  Update Complete! Now running %-29s ║\n" "v$NEW_VERSION"
+    printf "║  Update Complete! Now running %-32s║\n" "v$NEW_VERSION"
     echo "╚═══════════════════════════════════════════════════════════════╝"
     echo ""
     docker compose ps

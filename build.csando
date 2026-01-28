@@ -65,13 +65,15 @@ else
     // Build and push Docker images when using publish profile
     if (publish)
     {
-        // Build with version tag
+        // Build with version tag and pass VERSION build arg for labels
         Docker.Build("./src/Octoporty.Gateway/Dockerfile", o => o
             .WithTag($"octoporty-gateway:{version}")
+            .WithBuildArg("VERSION", version)
             .WithContext("./src"));
 
         Docker.Build("./src/Octoporty.Agent/Dockerfile", o => o
             .WithTag($"octoporty-agent:{version}")
+            .WithBuildArg("VERSION", version)
             .WithContext("./src"));
 
         // Push Gateway image to GHCR
@@ -100,13 +102,15 @@ else
     }
     else
     {
-        // Build with latest tag for local development
+        // Build with latest tag for local development, still pass version for labels
         Docker.Build("./src/Octoporty.Gateway/Dockerfile", o => o
             .WithTag("octoporty-gateway:latest")
+            .WithBuildArg("VERSION", version)
             .WithContext("./src"));
 
         Docker.Build("./src/Octoporty.Agent/Dockerfile", o => o
             .WithTag("octoporty-agent:latest")
+            .WithBuildArg("VERSION", version)
             .WithContext("./src"));
     }
 }
