@@ -262,10 +262,10 @@ docker compose logs -f agent
 
 ```bash
 # Check Gateway version
-docker inspect ghcr.io/aduggleby/octoporty-gateway:latest --format='{{.Config.Labels.version}}'
+docker inspect ghcr.io/aduggleby/octoporty-gateway:latest --format='{{index .Config.Labels "org.opencontainers.image.version"}}'
 
 # Check Agent version
-docker inspect ghcr.io/aduggleby/octoporty-agent:latest --format='{{.Config.Labels.version}}'
+docker inspect ghcr.io/aduggleby/octoporty-agent:latest --format='{{index .Config.Labels "org.opencontainers.image.version"}}'
 ```
 
 ### Gateway Self-Update
