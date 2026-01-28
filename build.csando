@@ -65,28 +65,23 @@ else
     // Build and push Docker images when using publish profile
     if (publish)
     {
-        // Build with version tag and pass VERSION build arg for labels
-        Docker.Build("./src/Octoporty.Gateway/Dockerfile", o => o
-            .WithTag($"octoporty-gateway:{version}")
+        // Build multi-arch images (amd64 + arm64) and push directly to GHCR
+        // Using buildx with --push to build and push in one step
+        Docker.Buildx("./src/Octoporty.Gateway/Dockerfile", o => o
+            .WithPlatforms("linux/amd64", "linux/arm64")
+            .WithTag($"ghcr.io/aduggleby/octoporty-gateway:{version}")
+            .WithTag("ghcr.io/aduggleby/octoporty-gateway:latest")
             .WithBuildArg("VERSION", version)
-            .WithContext("./src"));
+            .WithContext("./src")
+            .WithPush());
 
-        Docker.Build("./src/Octoporty.Agent/Dockerfile", o => o
-            .WithTag($"octoporty-agent:{version}")
+        Docker.Buildx("./src/Octoporty.Agent/Dockerfile", o => o
+            .WithPlatforms("linux/amd64", "linux/arm64")
+            .WithTag($"ghcr.io/aduggleby/octoporty-agent:{version}")
+            .WithTag("ghcr.io/aduggleby/octoporty-agent:latest")
             .WithBuildArg("VERSION", version)
-            .WithContext("./src"));
-
-        // Push Gateway image to GHCR
-        GitHub.PushImage("octoporty-gateway", o => o
-            .WithOwner("aduggleby")
-            .WithTag(version)
-            .WithTag("latest"));
-
-        // Push Agent image to GHCR
-        GitHub.PushImage("octoporty-agent", o => o
-            .WithOwner("aduggleby")
-            .WithTag(version)
-            .WithTag("latest"));
+            .WithContext("./src")
+            .WithPush());
 
         // Tag the git repo with the version and push
         Git.Tag($"v{version}", o => o.WithSkipIfExists());
