@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.18
+
+**2026-01-28**
+
+- Fix file watcher issues in read-only Docker containers
+
+---
+
 ## 0.9.17
 
 **2026-01-28**
