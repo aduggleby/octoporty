@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.14
+
+**2026-01-28**
+
+- Fix container compatibility for read-only environments
+
+---
+
 ## 0.9.13
 
 **2026-01-28**
