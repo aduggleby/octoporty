@@ -51,6 +51,7 @@ ENV ASPNETCORE_URLS=http://+:17201
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 
-COPY --from=build /app/publish .
+# Use --chown to ensure files are readable by the non-root app user in chiseled images
+COPY --from=build --chown=$APP_UID:$APP_UID /app/publish .
 
 ENTRYPOINT ["dotnet", "Octoporty.Agent.dll"]
