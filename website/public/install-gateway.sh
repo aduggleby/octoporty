@@ -38,7 +38,7 @@ echo "  • Generate a secure API key for Agent authentication"
 echo "  • Create Docker Compose and Caddy configuration files"
 echo "  • Pull the Octoporty Gateway Docker image"
 echo ""
-read -p "Do you want to continue? [Y/n] " -n 1 -r
+read -p "Do you want to continue? [Y/n] " -n 1 -r < /dev/tty
 echo ""
 if [[ $REPLY =~ ^[Nn]$ ]]; then
     echo "Installation cancelled."
@@ -62,7 +62,7 @@ prompt_install() {
 
     echo "$name is not installed."
     echo ""
-    read -p "Would you like to install $name? [Y/n/a] (a=install all) " -n 1 -r
+    read -p "Would you like to install $name? [Y/n/a] (a=install all) " -n 1 -r < /dev/tty
     echo ""
 
     if [[ $REPLY =~ ^[Aa]$ ]]; then

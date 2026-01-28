@@ -37,7 +37,7 @@ echo "  • Generate secure JWT secret and admin credentials"
 echo "  • Create Docker Compose configuration"
 echo "  • Pull the Octoporty Agent Docker image"
 echo ""
-read -p "Do you want to continue? [Y/n] " -n 1 -r
+read -p "Do you want to continue? [Y/n] " -n 1 -r < /dev/tty
 echo ""
 if [[ $REPLY =~ ^[Nn]$ ]]; then
     echo "Installation cancelled."
@@ -61,7 +61,7 @@ prompt_install() {
 
     echo "$name is not installed."
     echo ""
-    read -p "Would you like to install $name? [Y/n/a] (a=install all) " -n 1 -r
+    read -p "Would you like to install $name? [Y/n/a] (a=install all) " -n 1 -r < /dev/tty
     echo ""
 
     if [[ $REPLY =~ ^[Aa]$ ]]; then
