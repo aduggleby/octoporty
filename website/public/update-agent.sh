@@ -1,13 +1,13 @@
 #!/bin/bash
 # update-agent.sh
 # Octoporty Agent update script
-# Version: 0.9.10
+# Version: 0.9.11
 # Usage: curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 set -e
 
 INSTALL_DIR="/opt/octoporty/agent"
-SCRIPT_VERSION="0.9.10"
+SCRIPT_VERSION="0.9.11"
 
 cat << 'EOF'
 

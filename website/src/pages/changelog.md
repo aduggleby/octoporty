@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.11
+
+**2026-01-28**
+
+- Add new build system configuration options for improved developer workflow
+
+---
+
 ## 0.9.0
 
 **2026-01-28**
