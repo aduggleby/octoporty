@@ -1,6 +1,7 @@
 #!/bin/bash
 # install-gateway.sh
 # Octoporty Gateway installation script
+# Version: 0.9.0
 # Usage: curl -fsSL https://octoporty.com/install-gateway.sh | bash
 
 set -e
@@ -9,30 +10,148 @@ INSTALL_DIR="/opt/octoporty/gateway"
 COMPOSE_FILE="docker-compose.yml"
 ENV_FILE=".env"
 CADDYFILE="Caddyfile"
+SCRIPT_VERSION="0.9.0"
 
-echo "╔═══════════════════════════════════════════════════════════════╗"
-echo "║           Octoporty Gateway Installation                      ║"
-echo "║           https://octoporty.com                               ║"
-echo "╚═══════════════════════════════════════════════════════════════╝"
+cat << 'EOF'
+
+   ██████╗  ██████╗████████╗ ██████╗ ██████╗  ██████╗ ██████╗ ████████╗██╗   ██╗
+  ██╔═══██╗██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝╚██╗ ██╔╝
+  ██║   ██║██║        ██║   ██║   ██║██████╔╝██║   ██║██████╔╝   ██║    ╚████╔╝
+  ██║   ██║██║        ██║   ██║   ██║██╔═══╝ ██║   ██║██╔══██╗   ██║     ╚██╔╝
+  ╚██████╔╝╚██████╗   ██║   ╚██████╔╝██║     ╚██████╔╝██║  ██║   ██║      ██║
+   ╚═════╝  ╚═════╝   ╚═╝    ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═╝
+
+          ════════════════════════════════════════════════════
+               Self-hosted reverse proxy tunneling solution
+          ════════════════════════════════════════════════════
+
+EOF
+
+echo "  Gateway Installation Script v$SCRIPT_VERSION"
+echo "  https://octoporty.com"
 echo ""
 
-# Check for required commands
-for cmd in docker curl; do
-    if ! command -v $cmd &> /dev/null; then
-        echo "Error: $cmd is required but not installed."
+# Detect Linux distribution
+detect_distro() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        DISTRO=$ID
+        DISTRO_FAMILY=$ID_LIKE
+    elif [ -f /etc/redhat-release ]; then
+        DISTRO="rhel"
+    elif [ -f /etc/debian_version ]; then
+        DISTRO="debian"
+    else
+        DISTRO="unknown"
+    fi
+    echo "$DISTRO"
+}
+
+# Install Docker based on distribution
+install_docker() {
+    local distro=$(detect_distro)
+    echo "Detected distribution: $distro"
+    echo ""
+
+    case "$distro" in
+        ubuntu|debian|linuxmint|pop)
+            echo "Installing Docker for Debian/Ubuntu..."
+            sudo apt-get update
+            sudo apt-get install -y ca-certificates curl gnupg
+            sudo install -m 0755 -d /etc/apt/keyrings
+            curl -fsSL https://download.docker.com/linux/$distro/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+            sudo chmod a+r /etc/apt/keyrings/docker.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$distro $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            ;;
+        centos|rhel|rocky|almalinux)
+            echo "Installing Docker for RHEL/CentOS..."
+            sudo yum install -y yum-utils
+            sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+            sudo yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            ;;
+        fedora)
+            echo "Installing Docker for Fedora..."
+            sudo dnf -y install dnf-plugins-core
+            sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+            sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            ;;
+        arch|manjaro|endeavouros)
+            echo "Installing Docker for Arch Linux..."
+            sudo pacman -Sy --noconfirm docker docker-compose
+            ;;
+        opensuse*|sles)
+            echo "Installing Docker for openSUSE..."
+            sudo zypper install -y docker docker-compose
+            ;;
+        *)
+            echo "Unsupported distribution: $distro"
+            echo "Attempting to use the official Docker install script..."
+            curl -fsSL https://get.docker.com | sudo sh
+            ;;
+    esac
+
+    # Start and enable Docker service
+    sudo systemctl start docker
+    sudo systemctl enable docker
+
+    # Add current user to docker group
+    if [ -n "$SUDO_USER" ]; then
+        sudo usermod -aG docker "$SUDO_USER"
+        echo ""
+        echo "Added $SUDO_USER to the docker group."
+        echo "You may need to log out and back in for this to take effect."
+    fi
+
+    echo ""
+    echo "Docker installed successfully!"
+}
+
+# Check for curl
+if ! command -v curl &> /dev/null; then
+    echo "Error: curl is required but not installed."
+    echo "Please install curl first:"
+    echo "  Ubuntu/Debian: sudo apt-get install curl"
+    echo "  CentOS/RHEL:   sudo yum install curl"
+    echo "  Fedora:        sudo dnf install curl"
+    echo "  Arch:          sudo pacman -S curl"
+    exit 1
+fi
+
+# Check for Docker
+if ! command -v docker &> /dev/null; then
+    echo "Docker is not installed."
+    echo ""
+    read -p "Would you like to install Docker? [Y/n] " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
+        echo "Docker is required. Please install Docker manually and run this script again."
         exit 1
     fi
-done
+    install_docker
+fi
 
 # Check for docker compose
 if ! docker compose version &> /dev/null; then
-    echo "Error: docker compose is required but not installed."
-    exit 1
+    echo "Docker Compose plugin is not installed."
+    echo ""
+    read -p "Would you like to install Docker with Compose plugin? [Y/n] " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
+        echo "Docker Compose is required. Please install it manually and run this script again."
+        exit 1
+    fi
+    install_docker
 fi
+
+echo "Docker and Docker Compose are installed."
+echo ""
 
 # Create installation directory
 echo "Creating installation directory: $INSTALL_DIR"
 sudo mkdir -p "$INSTALL_DIR"
+sudo chown $(id -u):$(id -g) "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
 # Generate secure API key if not exists
