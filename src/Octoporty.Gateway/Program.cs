@@ -3,6 +3,7 @@
 // Configures WebSocket endpoint for Agent connections with pre-connection API key validation.
 // Validates API key length at startup (minimum 32 characters).
 // Registers tunnel services and request routing middleware.
+// Uses CreateSlimBuilder to avoid file watcher issues in read-only containers.
 
 using System.Security.Cryptography;
 using System.Text;
@@ -13,15 +14,14 @@ using Octoporty.Shared.Logging;
 using Octoporty.Shared.Options;
 using Octoporty.Shared.Startup;
 
-var builder = WebApplication.CreateBuilder(new WebApplicationOptions
-{
-    Args = args,
-    ContentRootPath = AppContext.BaseDirectory
-});
+// Use SlimBuilder to avoid default config file loading with reloadOnChange: true
+// which fails in read-only containers (chiseled images)
+var builder = WebApplication.CreateSlimBuilder(args);
 
-// Disable config file watchers - required for read-only containers (chiseled images)
-// The default reloadOnChange: true requires write access to set up file watchers
-builder.Configuration.Sources.Clear();
+// Manually configure settings that SlimBuilder doesn't include
+builder.WebHost.UseKestrelCore();
+
+// Add configuration without file watchers
 builder.Configuration
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
@@ -32,6 +32,9 @@ builder.Host.UseOctoportySerilog("Octoporty.Gateway");
 
 builder.Services.Configure<GatewayOptions>(builder.Configuration.GetSection("Gateway"));
 builder.Services.Configure<LoggingOptions>(builder.Configuration.GetSection("Logging"));
+
+// Add routing (required for MapGet, etc.)
+builder.Services.AddRouting();
 
 builder.Services.AddSingleton<TunnelConnectionManager>();
 builder.Services.AddSingleton<ITunnelConnectionManager>(sp => sp.GetRequiredService<TunnelConnectionManager>());

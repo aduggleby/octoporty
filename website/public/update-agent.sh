@@ -105,10 +105,9 @@ echo ""
 echo "This will restart the Agent service, causing a brief interruption"
 echo "to any active tunnel connections."
 echo ""
-read -p "Do you want to apply this update? [Y/n] " -n 1 -r < /dev/tty
-echo ""
+read -p "Do you want to apply this update? [y/N] " -r < /dev/tty
 
-if [[ $REPLY =~ ^[Nn]$ ]]; then
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo ""
     echo "Update cancelled. The new image has been downloaded but not applied."
     echo "Run this script again when ready to update."

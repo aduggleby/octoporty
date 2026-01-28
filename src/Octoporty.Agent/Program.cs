@@ -3,6 +3,7 @@
 // Configures JWT authentication with cookie and header support for SPAs.
 // Validates JwtSecret (32+ chars) and Password at startup.
 // Serves embedded React SPA from wwwroot with fallback routing.
+// Uses CreateSlimBuilder to avoid file watcher issues in read-only containers.
 
 using System.Text;
 using FastEndpoints;
@@ -17,15 +18,14 @@ using Octoporty.Shared.Logging;
 using Octoporty.Shared.Options;
 using Octoporty.Shared.Startup;
 
-var builder = WebApplication.CreateBuilder(new WebApplicationOptions
-{
-    Args = args,
-    ContentRootPath = AppContext.BaseDirectory
-});
+// Use SlimBuilder to avoid default config file loading with reloadOnChange: true
+// which fails in read-only containers (chiseled images)
+var builder = WebApplication.CreateSlimBuilder(args);
 
-// Disable config file watchers - required for read-only containers (chiseled images)
-// The default reloadOnChange: true requires write access to set up file watchers
-builder.Configuration.Sources.Clear();
+// Manually configure settings that SlimBuilder doesn't include
+builder.WebHost.UseKestrelCore();
+
+// Add configuration without file watchers
 builder.Configuration
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
@@ -65,6 +65,9 @@ StartupBanner.Print("Agent", new Dictionary<string, string?>
     ["Password"] = agentOptions.Auth.Password,
     ["Environment"] = builder.Environment.EnvironmentName
 });
+
+// Add routing (required for MapGet, MapHub, etc.)
+builder.Services.AddRouting();
 
 // Database (SQLite for lightweight local storage)
 builder.Services.AddDbContext<OctoportyDbContext>(options =>
