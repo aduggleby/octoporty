@@ -2,7 +2,7 @@
   "name": "octoporty-website",
   "type": "module",
   "private": true,
-  "version": "0.9.6",
+  "version": "0.9.7",
   "scripts": {
     "dev": "astro dev --host 0.0.0.0",
     "build": "astro build",
