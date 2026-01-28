@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.12
+
+**2026-01-28**
+
+- Update documentation for NAS platforms (QNAP and Unraid)
+
+---
+
 ## 0.9.11
 
 **2026-01-28**
