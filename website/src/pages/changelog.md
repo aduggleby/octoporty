@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.13
+
+**2026-01-28**
+
+- Internal improvements
+
+---
+
 ## 0.9.12
 
 **2026-01-28**
