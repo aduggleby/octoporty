@@ -1,16 +1,31 @@
 #!/bin/bash
 # update-agent.sh
 # Octoporty Agent update script
+# Version: 0.9.0
 # Usage: curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 set -e
 
 INSTALL_DIR="/opt/octoporty/agent"
+SCRIPT_VERSION="0.9.0"
 
-echo "╔═══════════════════════════════════════════════════════════════╗"
-echo "║           Octoporty Agent Update                              ║"
-echo "║           https://octoporty.com                               ║"
-echo "╚═══════════════════════════════════════════════════════════════╝"
+cat << 'EOF'
+
+   ██████╗  ██████╗████████╗ ██████╗ ██████╗  ██████╗ ██████╗ ████████╗██╗   ██╗
+  ██╔═══██╗██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝╚██╗ ██╔╝
+  ██║   ██║██║        ██║   ██║   ██║██████╔╝██║   ██║██████╔╝   ██║    ╚████╔╝
+  ██║   ██║██║        ██║   ██║   ██║██╔═══╝ ██║   ██║██╔══██╗   ██║     ╚██╔╝
+  ╚██████╔╝╚██████╗   ██║   ╚██████╔╝██║     ╚██████╔╝██║  ██║   ██║      ██║
+   ╚═════╝  ╚═════╝   ╚═╝    ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═╝
+
+          ════════════════════════════════════════════════════
+               Self-hosted reverse proxy tunneling solution
+          ════════════════════════════════════════════════════
+
+EOF
+
+echo "  Agent Update Script v$SCRIPT_VERSION"
+echo "  https://octoporty.com"
 echo ""
 
 # Check if installation exists

@@ -30,6 +30,50 @@ echo "  Agent Installation Script v$SCRIPT_VERSION"
 echo "  https://octoporty.com"
 echo ""
 
+echo "This script will:"
+echo "  • Check and optionally install Docker and Docker Compose"
+echo "  • Create installation directory at $INSTALL_DIR"
+echo "  • Generate secure JWT secret and admin credentials"
+echo "  • Create Docker Compose configuration"
+echo "  • Pull the Octoporty Agent Docker image"
+echo ""
+read -p "Do you want to continue? [Y/n] " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[Nn]$ ]]; then
+    echo "Installation cancelled."
+    exit 0
+fi
+echo ""
+
+# Track if user wants to install all dependencies
+INSTALL_ALL=false
+
+# Prompt for dependency installation
+# Returns 0 if user agrees, 1 if user declines
+# Sets INSTALL_ALL=true if user chooses 'a' (always)
+prompt_install() {
+    local name="$1"
+
+    if [ "$INSTALL_ALL" = true ]; then
+        echo "Auto-installing $name..."
+        return 0
+    fi
+
+    echo "$name is not installed."
+    echo ""
+    read -p "Would you like to install $name? [Y/n/a] (a=install all) " -n 1 -r
+    echo ""
+
+    if [[ $REPLY =~ ^[Aa]$ ]]; then
+        INSTALL_ALL=true
+        return 0
+    elif [[ $REPLY =~ ^[Nn]$ ]]; then
+        return 1
+    else
+        return 0
+    fi
+}
+
 # Detect Linux distribution
 detect_distro() {
     if [ -f /etc/os-release ]; then
@@ -44,6 +88,38 @@ detect_distro() {
         DISTRO="unknown"
     fi
     echo "$DISTRO"
+}
+
+# Install curl based on distribution
+install_curl() {
+    local distro=$(detect_distro)
+    echo "Installing curl for $distro..."
+
+    case "$distro" in
+        ubuntu|debian|linuxmint|pop)
+            sudo apt-get update
+            sudo apt-get install -y curl
+            ;;
+        centos|rhel|rocky|almalinux)
+            sudo yum install -y curl
+            ;;
+        fedora)
+            sudo dnf install -y curl
+            ;;
+        arch|manjaro|endeavouros)
+            sudo pacman -Sy --noconfirm curl
+            ;;
+        opensuse*|sles)
+            sudo zypper install -y curl
+            ;;
+        *)
+            echo "Unable to install curl automatically for $distro"
+            echo "Please install curl manually and run this script again."
+            exit 1
+            ;;
+    esac
+
+    echo "curl installed successfully!"
 }
 
 # Install Docker based on distribution
@@ -109,39 +185,32 @@ install_docker() {
 
 # Check for curl
 if ! command -v curl &> /dev/null; then
-    echo "Error: curl is required but not installed."
-    echo "Please install curl first:"
-    echo "  Ubuntu/Debian: sudo apt-get install curl"
-    echo "  CentOS/RHEL:   sudo yum install curl"
-    echo "  Fedora:        sudo dnf install curl"
-    echo "  Arch:          sudo pacman -S curl"
-    exit 1
+    if prompt_install "curl"; then
+        install_curl
+    else
+        echo "curl is required. Please install curl manually and run this script again."
+        exit 1
+    fi
 fi
 
 # Check for Docker
 if ! command -v docker &> /dev/null; then
-    echo "Docker is not installed."
-    echo ""
-    read -p "Would you like to install Docker? [Y/n] " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Nn]$ ]]; then
+    if prompt_install "Docker"; then
+        install_docker
+    else
         echo "Docker is required. Please install Docker manually and run this script again."
         exit 1
     fi
-    install_docker
 fi
 
 # Check for docker compose
 if ! docker compose version &> /dev/null; then
-    echo "Docker Compose plugin is not installed."
-    echo ""
-    read -p "Would you like to install Docker with Compose plugin? [Y/n] " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Nn]$ ]]; then
+    if prompt_install "Docker Compose plugin"; then
+        install_docker
+    else
         echo "Docker Compose is required. Please install it manually and run this script again."
         exit 1
     fi
-    install_docker
 fi
 
 echo "Docker and Docker Compose are installed."
@@ -235,6 +304,9 @@ echo "     cd $INSTALL_DIR && docker compose up -d"
 echo ""
 echo "  3. Access the web UI at http://localhost:17201"
 echo "     (or replace localhost with this server's IP)"
+echo ""
+echo "  4. Create port mappings in the web UI to expose your services"
+echo "     The Gateway will automatically configure Caddy routes."
 echo ""
 echo "Documentation: https://octoporty.com"
 echo "GitHub: https://github.com/aduggleby/octoporty"

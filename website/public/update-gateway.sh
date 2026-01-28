@@ -1,16 +1,31 @@
 #!/bin/bash
 # update-gateway.sh
 # Octoporty Gateway update script
+# Version: 0.9.0
 # Usage: curl -fsSL https://octoporty.com/update-gateway.sh | bash
 
 set -e
 
 INSTALL_DIR="/opt/octoporty/gateway"
+SCRIPT_VERSION="0.9.0"
 
-echo "╔═══════════════════════════════════════════════════════════════╗"
-echo "║           Octoporty Gateway Update                            ║"
-echo "║           https://octoporty.com                               ║"
-echo "╚═══════════════════════════════════════════════════════════════╝"
+cat << 'EOF'
+
+   ██████╗  ██████╗████████╗ ██████╗ ██████╗  ██████╗ ██████╗ ████████╗██╗   ██╗
+  ██╔═══██╗██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝╚██╗ ██╔╝
+  ██║   ██║██║        ██║   ██║   ██║██████╔╝██║   ██║██████╔╝   ██║    ╚████╔╝
+  ██║   ██║██║        ██║   ██║   ██║██╔═══╝ ██║   ██║██╔══██╗   ██║     ╚██╔╝
+  ╚██████╔╝╚██████╗   ██║   ╚██████╔╝██║     ╚██████╔╝██║  ██║   ██║      ██║
+   ╚═════╝  ╚═════╝   ╚═╝    ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═╝
+
+          ════════════════════════════════════════════════════
+               Self-hosted reverse proxy tunneling solution
+          ════════════════════════════════════════════════════
+
+EOF
+
+echo "  Gateway Update Script v$SCRIPT_VERSION"
+echo "  https://octoporty.com"
 echo ""
 
 # Check if installation exists

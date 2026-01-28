@@ -1,0 +1,68 @@
+// =============================================================================
+// ando-post-bump.csando
+//
+// Post-hook that runs after ando bump command.
+// Updates version numbers in install and update scripts.
+// =============================================================================
+
+var newVersion = Env("ANDO_NEW_VERSION");
+var oldVersion = Env("ANDO_OLD_VERSION");
+
+if (string.IsNullOrEmpty(newVersion))
+{
+    Log.Warning("ANDO_NEW_VERSION not set, skipping script version updates.");
+    return;
+}
+
+Log.Info($"Updating script versions from {oldVersion} to {newVersion}...");
+
+// Scripts that need version updates
+var scripts = new[]
+{
+    "website/public/install-gateway.sh",
+    "website/public/install-agent.sh",
+    "website/public/update-gateway.sh",
+    "website/public/update-agent.sh"
+};
+
+foreach (var scriptPath in scripts)
+{
+    var fullPath = System.IO.Path.Combine(Root, scriptPath);
+
+    if (!System.IO.File.Exists(fullPath))
+    {
+        Log.Warning($"  Script not found: {scriptPath}");
+        continue;
+    }
+
+    var content = System.IO.File.ReadAllText(fullPath);
+    var originalContent = content;
+
+    // Update the header comment: # Version: X.Y.Z
+    content = System.Text.RegularExpressions.Regex.Replace(
+        content,
+        @"^(# Version: )[\d\.]+",
+        $"${{1}}{newVersion}",
+        System.Text.RegularExpressions.RegexOptions.Multiline
+    );
+
+    // Update the SCRIPT_VERSION variable: SCRIPT_VERSION="X.Y.Z"
+    content = System.Text.RegularExpressions.Regex.Replace(
+        content,
+        @"^(SCRIPT_VERSION="")[\d\.]+("")",
+        $"${{1}}{newVersion}${{2}}",
+        System.Text.RegularExpressions.RegexOptions.Multiline
+    );
+
+    if (content != originalContent)
+    {
+        System.IO.File.WriteAllText(fullPath, content);
+        Log.Info($"  Updated: {scriptPath}");
+    }
+    else
+    {
+        Log.Info($"  No changes: {scriptPath}");
+    }
+}
+
+Log.Info("Script version updates complete.");
