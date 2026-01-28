@@ -11,6 +11,7 @@ using Octoporty.Gateway.Features.Test;
 using Octoporty.Gateway.Services;
 using Octoporty.Shared.Logging;
 using Octoporty.Shared.Options;
+using Octoporty.Shared.Startup;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -46,6 +47,14 @@ if (string.IsNullOrWhiteSpace(gatewayOptions.ApiKey) || gatewayOptions.ApiKey.Le
 {
     throw new InvalidOperationException("Gateway__ApiKey must be at least 32 characters");
 }
+
+// Display startup banner with configuration
+StartupBanner.Print("Gateway", new Dictionary<string, string?>
+{
+    ["ApiKey"] = gatewayOptions.ApiKey,
+    ["CaddyAdminUrl"] = gatewayOptions.CaddyAdminUrl,
+    ["Environment"] = app.Environment.EnvironmentName
+});
 
 app.UseWebSockets();
 app.UseRequestRouting();

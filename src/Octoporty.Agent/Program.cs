@@ -15,6 +15,7 @@ using Octoporty.Agent.Hubs;
 using Octoporty.Agent.Services;
 using Octoporty.Shared.Logging;
 using Octoporty.Shared.Options;
+using Octoporty.Shared.Startup;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -53,6 +54,17 @@ if (string.IsNullOrWhiteSpace(agentOptions.Auth.Password))
         "Agent__Auth__Password must be set. " +
         "Configure a strong password for the admin user.");
 }
+
+// Display startup banner with configuration
+StartupBanner.Print("Agent", new Dictionary<string, string?>
+{
+    ["GatewayUrl"] = agentOptions.GatewayUrl,
+    ["ApiKey"] = agentOptions.ApiKey,
+    ["JwtSecret"] = agentOptions.JwtSecret,
+    ["Username"] = agentOptions.Auth.Username,
+    ["Password"] = agentOptions.Auth.Password,
+    ["Environment"] = builder.Environment.EnvironmentName
+});
 
 // Database (SQLite for lightweight local storage)
 builder.Services.AddDbContext<OctoportyDbContext>(options =>
