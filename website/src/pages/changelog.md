@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.19
+
+**2026-01-28**
+
+- Fix container file permissions for non-root deployments
+
+---
+
 ## 0.9.18
 
 **2026-01-28**

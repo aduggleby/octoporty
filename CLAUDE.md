@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Server Access Restrictions
+
+**NEVER use SSH with personal key files from ~/.ssh/ to access ANY servers.**
+
+- **FORBIDDEN:** `ssh -i ~/.ssh/id_* ...` or any SSH command using personal keys
+- **FORBIDDEN:** Accessing any server outside the designated Claude project
+
+**ONLY access allowed:**
+- Use `hcloud` CLI to manage VMs in the **"claude" Hetzner project** only
+- The only VM you may work with is **"claude-octoporty"** in that project
+- Always use hcloud commands, never direct SSH with personal keys
+
+If you need to test deployments or run commands on a VM, ask the user to do it or use hcloud SSH which manages its own keys.
+
 ## Repository
 
 - **Owner:** aduggleby
