@@ -68,16 +68,7 @@ export function DashboardPage() {
     }
   }
 
-  const formatUptime = (seconds: number | null): string => {
-    if (!seconds) return '--:--:--'
-    const h = Math.floor(seconds / 3600)
-    const m = Math.floor((seconds % 3600) / 60)
-    const s = Math.floor(seconds % 60)
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-  }
-
   const activeMappings = mappings.filter((m) => m.enabled)
-  const inactiveMappings = mappings.filter((m) => !m.enabled)
 
   if (isLoading) {
     return (
@@ -111,131 +102,12 @@ export function DashboardPage() {
           <ConnectionStatus
             status={status.connectionStatus}
             gatewayUrl={status.gatewayUrl}
+            gatewayUptime={status.gatewayUptime}
             lastConnected={status.lastConnected}
             onReconnect={isReconnecting ? undefined : handleReconnect}
           />
         )}
       </motion.div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Uptime */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="panel"
-        >
-          <div className="panel-header">
-            <svg
-              className="w-4 h-4 text-cyan-base"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            <span className="panel-title">Uptime</span>
-          </div>
-          <div className="panel-body">
-            <p className="data-value data-value-lg font-mono text-cyan-base">
-              {formatUptime(status?.uptime ?? null)}
-            </p>
-            <p className="data-label mt-2">Current session</p>
-          </div>
-        </motion.div>
-
-        {/* Active Mappings */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="panel"
-        >
-          <div className="panel-header">
-            <svg
-              className="w-4 h-4 text-emerald-base"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
-            <span className="panel-title">Active Mappings</span>
-          </div>
-          <div className="panel-body">
-            <p className="data-value data-value-lg text-emerald-base">
-              {activeMappings.length}
-            </p>
-            <p className="data-label mt-2">
-              {inactiveMappings.length} disabled
-            </p>
-          </div>
-        </motion.div>
-
-        {/* Gateway */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="panel"
-        >
-          <div className="panel-header">
-            <svg
-              className="w-4 h-4 text-amber-base"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-              <line x1="8" y1="21" x2="16" y2="21" />
-              <line x1="12" y1="17" x2="12" y2="21" />
-            </svg>
-            <span className="panel-title">Gateway</span>
-          </div>
-          <div className="panel-body">
-            <p className="data-value text-amber-base truncate text-sm">
-              {status?.gatewayUrl?.replace('wss://', '').replace('/tunnel', '') ?? '--'}
-            </p>
-            <p className="data-label mt-2">Target endpoint</p>
-          </div>
-        </motion.div>
-
-        {/* Version */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="panel"
-        >
-          <div className="panel-header">
-            <svg
-              className="w-4 h-4 text-text-tertiary"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="16" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12.01" y2="8" />
-            </svg>
-            <span className="panel-title">Agent Version</span>
-          </div>
-          <div className="panel-body">
-            <p className="data-value data-value-lg">
-              v{status?.version ?? '0.0.0'}
-            </p>
-            <p className="data-label mt-2">Current build</p>
-          </div>
-        </motion.div>
-      </div>
 
       {/* Quick Actions & Recent Mappings */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

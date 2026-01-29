@@ -100,7 +100,7 @@ export function MappingCard({
             EXTERNAL
           </span>
           <span className="text-sm">
-            {mapping.externalDomain}:{mapping.externalPort}
+            https://{mapping.externalDomain}
           </span>
         </div>
 
@@ -211,7 +211,7 @@ export function MappingRow({
         </div>
       </td>
       <td className="font-mono text-cyan-base">
-        {mapping.externalDomain}:{mapping.externalPort}
+        https://{mapping.externalDomain}
       </td>
       <td className="font-mono text-text-secondary">
         {mapping.internalProtocol.toLowerCase()}://{mapping.internalHost}:

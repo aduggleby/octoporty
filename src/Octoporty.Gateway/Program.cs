@@ -36,6 +36,7 @@ builder.Services.Configure<LoggingOptions>(builder.Configuration.GetSection("Log
 // Add routing (required for MapGet, etc.)
 builder.Services.AddRouting();
 
+builder.Services.AddSingleton<GatewayState>();
 builder.Services.AddSingleton<TunnelConnectionManager>();
 builder.Services.AddSingleton<ITunnelConnectionManager>(sp => sp.GetRequiredService<TunnelConnectionManager>());
 builder.Services.AddSingleton<UpdateService>();

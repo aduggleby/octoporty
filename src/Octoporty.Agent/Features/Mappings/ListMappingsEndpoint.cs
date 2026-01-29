@@ -31,7 +31,6 @@ public class ListMappingsEndpoint : EndpointWithoutRequest<List<MappingResponse>
                 Id = m.Id,
                 Name = m.Description ?? m.ExternalDomain,  // Fallback to domain if no description
                 ExternalDomain = m.ExternalDomain,
-                ExternalPort = m.ExternalPort,
                 InternalHost = m.InternalHost,
                 InternalPort = m.InternalPort,
                 InternalProtocol = m.InternalUseTls ? "Https" : "Http",

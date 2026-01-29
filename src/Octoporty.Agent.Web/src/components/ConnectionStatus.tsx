@@ -10,9 +10,49 @@ import clsx from 'clsx'
 interface ConnectionStatusProps {
   status: ConnectionStatusType
   gatewayUrl?: string
+  gatewayUptime?: number | null
   lastConnected?: string | null
   compact?: boolean
   onReconnect?: () => void
+}
+
+/**
+ * Formats uptime in seconds to a human-readable string showing only the highest unit.
+ * Examples: "14 minutes", "1 hour", "4 days"
+ */
+function formatUptimeHumanReadable(seconds: number | null): string {
+  if (!seconds || seconds < 0) return '--'
+
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (days > 0) {
+    return days === 1 ? '1 day' : `${days} days`
+  }
+  if (hours > 0) {
+    return hours === 1 ? '1 hour' : `${hours} hours`
+  }
+  if (minutes > 0) {
+    return minutes === 1 ? '1 minute' : `${minutes} minutes`
+  }
+  return 'just started'
+}
+
+/**
+ * Extracts the domain from a gateway URL (removes protocol, port, path).
+ */
+function extractGatewayDomain(url?: string): string {
+  if (!url) return '--'
+  try {
+    // Handle both wss:// and https:// URLs
+    const urlObj = new URL(url.replace('wss://', 'https://'))
+    return urlObj.hostname
+  } catch {
+    // Fallback: try simple regex extraction
+    const match = url.match(/(?:wss?|https?):\/\/([^:/]+)/)
+    return match?.[1] ?? '--'
+  }
 }
 
 const statusConfig: Record<
@@ -44,11 +84,13 @@ const statusConfig: Record<
 export function ConnectionStatus({
   status,
   gatewayUrl,
+  gatewayUptime,
   lastConnected,
   compact = false,
   onReconnect,
 }: ConnectionStatusProps) {
   const config = statusConfig[status]
+  const gatewayDomain = extractGatewayDomain(gatewayUrl)
 
   if (compact) {
     return (
@@ -76,9 +118,9 @@ export function ConnectionStatus({
         <div className={clsx('led w-3 h-3', config.ledClass)} />
       </div>
 
-      {/* Status Text */}
+      {/* Status Text & Gateway Domain */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <span className="font-mono text-sm font-bold tracking-wider text-text-primary">
             {config.label}
           </span>
@@ -95,11 +137,17 @@ export function ConnectionStatus({
           </span>
         </div>
 
-        {gatewayUrl && (
-          <p className="font-mono text-xs text-text-tertiary mt-1 truncate">
-            {gatewayUrl}
-          </p>
-        )}
+        {/* Gateway Domain - Prominent Display */}
+        <div className="flex items-center gap-4 mt-2">
+          <span className="font-mono text-lg font-semibold text-cyan-base truncate">
+            {gatewayDomain}
+          </span>
+          {status === 'Connected' && gatewayUptime !== undefined && gatewayUptime !== null && (
+            <span className="font-mono text-xs text-text-tertiary">
+              uptime: {formatUptimeHumanReadable(gatewayUptime)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Reconnect Button */}

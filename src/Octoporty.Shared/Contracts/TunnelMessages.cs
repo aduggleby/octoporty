@@ -106,6 +106,12 @@ public sealed class HeartbeatAckMessage : TunnelMessage
 
     [Key(1)]
     public required long ServerTimestamp { get; init; }
+
+    /// <summary>
+    /// Gateway uptime in seconds since start.
+    /// </summary>
+    [Key(2)]
+    public long? GatewayUptimeSeconds { get; init; }
 }
 
 [MessagePackObject]
@@ -226,21 +232,18 @@ public sealed class PortMappingDto
     public required string ExternalDomain { get; init; }
 
     [Key(2)]
-    public required int ExternalPort { get; init; }
-
-    [Key(3)]
     public required string InternalHost { get; init; }
 
-    [Key(4)]
+    [Key(3)]
     public required int InternalPort { get; init; }
 
-    [Key(5)]
+    [Key(4)]
     public required bool InternalUseTls { get; init; }
 
-    [Key(6)]
+    [Key(5)]
     public required bool AllowSelfSignedCerts { get; init; }
 
-    [Key(7)]
+    [Key(6)]
     public required bool IsEnabled { get; init; }
 }
 

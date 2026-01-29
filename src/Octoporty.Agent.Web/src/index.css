@@ -590,11 +590,22 @@ body {
 }
 
 /* Port Display */
+/* On mobile, stack vertically; on desktop, display horizontally */
 .port-display {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   font-family: var(--font-mono);
+}
+
+/* At md breakpoint (768px), switch to horizontal layout */
+@media (min-width: 768px) {
+  .port-display {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
 }
 
 .port-external {
@@ -604,11 +615,21 @@ body {
   border-radius: var(--radius-sm);
   color: var(--color-cyan-bright);
   font-weight: 600;
+  word-break: break-all;
 }
 
 .port-arrow {
   color: var(--color-text-tertiary);
   font-size: 18px;
+  transform: rotate(90deg);
+  align-self: center;
+}
+
+/* On desktop, arrow points right */
+@media (min-width: 768px) {
+  .port-arrow {
+    transform: rotate(0deg);
+  }
 }
 
 .port-internal {
@@ -618,6 +639,7 @@ body {
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
   font-weight: 500;
+  word-break: break-all;
 }
 
 /* Connection Status Panel */

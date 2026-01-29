@@ -7,6 +7,7 @@ using System.Net;
 using FastEndpoints;
 using FluentValidation;
 using Octoporty.Agent.Data;
+using Octoporty.Agent.Services;
 
 namespace Octoporty.Agent.Features.Mappings;
 
@@ -14,7 +15,6 @@ public class UpdateMappingFullRequest
 {
     public Guid Id { get; set; }
     public required string ExternalDomain { get; set; }
-    public int ExternalPort { get; set; } = 443;
     public required string InternalHost { get; set; }
     public int InternalPort { get; set; }
     public bool InternalUseTls { get; set; }
@@ -45,9 +45,6 @@ public class UpdateMappingValidator : Validator<UpdateMappingFullRequest>
             .MaximumLength(255)
             .Matches(@"^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?$")
             .WithMessage("Invalid domain format");
-
-        RuleFor(x => x.ExternalPort)
-            .InclusiveBetween(1, 65535);
 
         RuleFor(x => x.InternalHost)
             .NotEmpty()
@@ -95,11 +92,16 @@ public class UpdateMappingValidator : Validator<UpdateMappingFullRequest>
 public class UpdateMappingEndpoint : Endpoint<UpdateMappingFullRequest, MappingResponse>
 {
     private readonly OctoportyDbContext _db;
+    private readonly TunnelClient _tunnelClient;
     private readonly ILogger<UpdateMappingEndpoint> _logger;
 
-    public UpdateMappingEndpoint(OctoportyDbContext db, ILogger<UpdateMappingEndpoint> logger)
+    public UpdateMappingEndpoint(
+        OctoportyDbContext db,
+        TunnelClient tunnelClient,
+        ILogger<UpdateMappingEndpoint> logger)
     {
         _db = db;
+        _tunnelClient = tunnelClient;
         _logger = logger;
     }
 
@@ -119,7 +121,6 @@ public class UpdateMappingEndpoint : Endpoint<UpdateMappingFullRequest, MappingR
         }
 
         mapping.ExternalDomain = req.ExternalDomain;
-        mapping.ExternalPort = req.ExternalPort;
         mapping.InternalHost = req.InternalHost;
         mapping.InternalPort = req.InternalPort;
         mapping.InternalUseTls = req.InternalUseTls;
@@ -132,12 +133,21 @@ public class UpdateMappingEndpoint : Endpoint<UpdateMappingFullRequest, MappingR
 
         _logger.LogInformation("Updated port mapping {Id} for {Domain}", mapping.Id, mapping.ExternalDomain);
 
+        // Resync configuration with Gateway to apply the changes immediately
+        try
+        {
+            await _tunnelClient.ResyncConfigurationAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to resync configuration after update");
+        }
+
         await Send.OkAsync(new MappingResponse
         {
             Id = mapping.Id,
             Name = mapping.Description ?? mapping.ExternalDomain,
             ExternalDomain = mapping.ExternalDomain,
-            ExternalPort = mapping.ExternalPort,
             InternalHost = mapping.InternalHost,
             InternalPort = mapping.InternalPort,
             InternalProtocol = mapping.InternalUseTls ? "Https" : "Http",

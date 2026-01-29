@@ -156,7 +156,9 @@ export function LoginPage() {
           <div>
             <label className="label">Username</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              {/* Icon container: fixed width of 48px (w-12) to match input's pl-12 padding */}
+              {/* Uses flex centering to perfectly center the 20px icon within this space */}
+              <div className="absolute inset-y-0 left-0 w-12 flex items-center justify-center pointer-events-none">
                 <svg
                   className="w-5 h-5 text-text-muted"
                   viewBox="0 0 20 20"
@@ -171,7 +173,7 @@ export function LoginPage() {
               </div>
               <input
                 type="text"
-                className="input pl-12"
+                className="input pl-12!"
                 placeholder="Enter username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -186,7 +188,9 @@ export function LoginPage() {
           <div>
             <label className="label">Password</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              {/* Icon container: fixed width of 48px (w-12) to match input's pl-12 padding */}
+              {/* Uses flex centering to perfectly center the 20px icon within this space */}
+              <div className="absolute inset-y-0 left-0 w-12 flex items-center justify-center pointer-events-none">
                 <svg
                   className="w-5 h-5 text-text-muted"
                   viewBox="0 0 20 20"
@@ -201,7 +205,7 @@ export function LoginPage() {
               </div>
               <input
                 type="password"
-                className="input pl-12"
+                className="input pl-12!"
                 placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

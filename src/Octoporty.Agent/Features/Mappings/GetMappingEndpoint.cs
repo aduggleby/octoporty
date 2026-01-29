@@ -36,7 +36,6 @@ public class GetMappingEndpoint : Endpoint<GetMappingRequest, MappingResponse>
                 Id = m.Id,
                 Name = m.Description ?? m.ExternalDomain,
                 ExternalDomain = m.ExternalDomain,
-                ExternalPort = m.ExternalPort,
                 InternalHost = m.InternalHost,
                 InternalPort = m.InternalPort,
                 InternalProtocol = m.InternalUseTls ? "Https" : "Http",

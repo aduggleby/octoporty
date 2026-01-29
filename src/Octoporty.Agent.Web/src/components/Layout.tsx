@@ -67,6 +67,17 @@ export function Layout({ children }: LayoutProps) {
         </svg>
       ),
     },
+    {
+      to: '/gateway',
+      label: 'Gateway',
+      icon: (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+          <line x1="8" y1="21" x2="16" y2="21" />
+          <line x1="12" y1="17" x2="12" y2="21" />
+        </svg>
+      ),
+    },
   ]
 
   return (
@@ -150,9 +161,9 @@ export function Layout({ children }: LayoutProps) {
         </div>
       </aside>
 
-      {/* Mobile Menu Button */}
+      {/* Mobile Menu Button - only visible below md (768px) breakpoint */}
       <button
-        className="fixed top-4 left-4 z-50 md:hidden btn btn-secondary p-2"
+        className="fixed top-4 left-4 z-50 p-2 rounded-md bg-surface-3 border border-border-emphasis text-text-primary hidden max-md:block"
         onClick={() => setSidebarOpen(!sidebarOpen)}
       >
         <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -18,6 +18,7 @@ public class TunnelWebSocketHandler
     private readonly TunnelConnectionManager _connectionManager;
     private readonly ICaddyAdminClient _caddyClient;
     private readonly UpdateService _updateService;
+    private readonly GatewayState _gatewayState;
     private readonly ILogger<TunnelWebSocketHandler> _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly GatewayOptions _options;
@@ -28,6 +29,7 @@ public class TunnelWebSocketHandler
         TunnelConnectionManager connectionManager,
         ICaddyAdminClient caddyClient,
         UpdateService updateService,
+        GatewayState gatewayState,
         IOptions<GatewayOptions> options,
         ILogger<TunnelWebSocketHandler> logger,
         ILoggerFactory loggerFactory)
@@ -35,6 +37,7 @@ public class TunnelWebSocketHandler
         _connectionManager = connectionManager;
         _caddyClient = caddyClient;
         _updateService = updateService;
+        _gatewayState = gatewayState;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _options = options.Value;
@@ -234,7 +237,8 @@ public class TunnelWebSocketHandler
         await connection.SendAsync(new HeartbeatAckMessage
         {
             Timestamp = heartbeat.Timestamp,
-            ServerTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            ServerTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            GatewayUptimeSeconds = _gatewayState.UptimeSeconds
         }, ct);
     }
 

@@ -9,11 +9,12 @@ import {
   HubConnectionState,
   LogLevel,
 } from '@microsoft/signalr'
-import type { StatusUpdate, MappingStatusUpdate } from '../types'
+import type { StatusUpdate, MappingStatusUpdate, GatewayLog } from '../types'
 
 interface UseSignalROptions {
   onStatusUpdate?: (update: StatusUpdate) => void
   onMappingUpdate?: (update: MappingStatusUpdate) => void
+  onGatewayLog?: (log: GatewayLog) => void
   onReconnecting?: () => void
   onReconnected?: () => void
   onDisconnected?: (error?: Error) => void
@@ -64,6 +65,10 @@ export function useSignalR(options: UseSignalROptions = {}): UseSignalRReturn {
 
     connection.on('MappingStatusUpdate', (update: MappingStatusUpdate) => {
       options.onMappingUpdate?.(update)
+    })
+
+    connection.on('GatewayLog', (log: GatewayLog) => {
+      options.onGatewayLog?.(log)
     })
 
     connection.onreconnecting((error) => {

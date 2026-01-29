@@ -18,7 +18,6 @@ interface MappingFormProps {
 interface FormErrors {
   name?: string
   externalDomain?: string
-  externalPort?: string
   internalHost?: string
   internalPort?: string
 }
@@ -34,7 +33,6 @@ export function MappingForm({
   const [formData, setFormData] = useState<CreateMappingRequest>({
     name: mapping?.name ?? '',
     externalDomain: mapping?.externalDomain ?? '',
-    externalPort: mapping?.externalPort ?? 443,
     internalHost: mapping?.internalHost ?? 'localhost',
     internalPort: mapping?.internalPort ?? 80,
     internalProtocol: mapping?.internalProtocol ?? 'Http',
@@ -51,7 +49,6 @@ export function MappingForm({
       setFormData({
         name: mapping.name,
         externalDomain: mapping.externalDomain,
-        externalPort: mapping.externalPort,
         internalHost: mapping.internalHost,
         internalPort: mapping.internalPort,
         internalProtocol: mapping.internalProtocol,
@@ -76,10 +73,6 @@ export function MappingForm({
       newErrors.externalDomain = 'Invalid domain format'
     }
 
-    if (!formData.externalPort || formData.externalPort < 1 || formData.externalPort > 65535) {
-      newErrors.externalPort = 'Port must be between 1 and 65535'
-    }
-
     if (!formData.internalHost.trim()) {
       newErrors.internalHost = 'Internal host is required'
     }
@@ -97,7 +90,6 @@ export function MappingForm({
     setTouched({
       name: true,
       externalDomain: true,
-      externalPort: true,
       internalHost: true,
       internalPort: true,
     })
@@ -167,13 +159,13 @@ export function MappingForm({
           <span className="panel-title">External Endpoint</span>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-2">
-            <label className="label">Domain</label>
+        <div>
+          <label className="label">Domain</label>
+          <div className="flex items-center gap-3">
             <input
               type="text"
               className={clsx(
-                'input',
+                'input flex-1',
                 touched.externalDomain && errors.externalDomain && 'input-error'
               )}
               placeholder="app.example.com"
@@ -182,37 +174,30 @@ export function MappingForm({
               onBlur={() => handleBlur('externalDomain')}
               disabled={isLoading}
             />
-            {touched.externalDomain && errors.externalDomain && (
-              <p className="text-rose-base text-xs mt-2 font-mono">
-                {errors.externalDomain}
-              </p>
-            )}
+            <div className="flex items-center gap-1.5 px-3 py-2 bg-emerald-glow border border-emerald-dim rounded-md shrink-0">
+              <svg
+                className="w-4 h-4 text-emerald-base"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <span className="text-xs font-mono font-semibold text-emerald-base">
+                HTTPS
+              </span>
+            </div>
           </div>
-
-          <div>
-            <label className="label">Port</label>
-            <input
-              type="number"
-              className={clsx(
-                'input',
-                touched.externalPort && errors.externalPort && 'input-error'
-              )}
-              placeholder="443"
-              value={formData.externalPort}
-              onChange={(e) =>
-                updateField('externalPort', parseInt(e.target.value) || 443)
-              }
-              onBlur={() => handleBlur('externalPort')}
-              disabled={isLoading}
-              min={1}
-              max={65535}
-            />
-            {touched.externalPort && errors.externalPort && (
-              <p className="text-rose-base text-xs mt-2 font-mono">
-                {errors.externalPort}
-              </p>
-            )}
-          </div>
+          {touched.externalDomain && errors.externalDomain && (
+            <p className="text-rose-base text-xs mt-2 font-mono">
+              {errors.externalDomain}
+            </p>
+          )}
+          <p className="text-text-muted text-xs mt-2">
+            External endpoints always use HTTPS with automatic certificate provisioning
+          </p>
         </div>
       </div>
 

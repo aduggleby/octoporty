@@ -67,7 +67,6 @@ public class ToggleMappingEndpoint : Endpoint<ToggleMappingFullRequest, MappingR
             Id = mapping.Id,
             Name = mapping.Description ?? mapping.ExternalDomain,
             ExternalDomain = mapping.ExternalDomain,
-            ExternalPort = mapping.ExternalPort,
             InternalHost = mapping.InternalHost,
             InternalPort = mapping.InternalPort,
             InternalProtocol = mapping.InternalUseTls ? "Https" : "Http",

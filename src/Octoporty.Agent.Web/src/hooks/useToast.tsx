@@ -97,7 +97,10 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   const addToast = useCallback(
     (type: ToastType, title: string, message?: string, duration = 5000) => {
-      const id = crypto.randomUUID()
+      // Use crypto.randomUUID if available, otherwise fallback to timestamp + random
+      const id = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
       const toast: Toast = { id, type, title, message, duration }
 
       setToasts((prev) => [...prev, toast])

@@ -22,4 +22,11 @@ public record AgentStatusResponse
     /// When true, the user can trigger a Gateway update from the UI.
     /// </summary>
     public bool GatewayUpdateAvailable { get; init; }
+
+    /// <summary>
+    /// Gateway uptime in seconds, as reported by the Gateway.
+    /// Updated with each heartbeat cycle (every 30 seconds).
+    /// Null if not connected or uptime not yet received.
+    /// </summary>
+    public long? GatewayUptime { get; init; }
 }

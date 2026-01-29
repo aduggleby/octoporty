@@ -23,7 +23,7 @@ public class TunnelClient : BackgroundService
     private readonly ILogger<TunnelClient> _logger;
     private readonly AgentOptions _options;
     private readonly ReconnectionPolicy _reconnectionPolicy = new();
-    private readonly Channel<TunnelMessage> _outboundChannel;
+    private Channel<TunnelMessage> _outboundChannel;
 
     private ClientWebSocket? _webSocket;
     private CancellationTokenSource? _connectionCts;
@@ -42,6 +42,12 @@ public class TunnelClient : BackgroundService
     public string? GatewayVersion { get; private set; }
 
     /// <summary>
+    /// Gateway uptime in seconds, reported by the Gateway in heartbeat acks.
+    /// Updated every heartbeat cycle (30 seconds).
+    /// </summary>
+    public long? GatewayUptimeSeconds { get; private set; }
+
+    /// <summary>
     /// Indicates whether the Agent version is newer than the Gateway version.
     /// When true, the user can trigger a Gateway update from the UI.
     /// </summary>
@@ -57,7 +63,12 @@ public class TunnelClient : BackgroundService
         _serviceProvider = serviceProvider;
         _logger = logger;
         _options = options.Value;
-        _outboundChannel = Channel.CreateBounded<TunnelMessage>(new BoundedChannelOptions(1000)
+        _outboundChannel = CreateOutboundChannel();
+    }
+
+    private static Channel<TunnelMessage> CreateOutboundChannel()
+    {
+        return Channel.CreateBounded<TunnelMessage>(new BoundedChannelOptions(1000)
         {
             FullMode = BoundedChannelFullMode.DropOldest
         });
@@ -99,6 +110,10 @@ public class TunnelClient : BackgroundService
     private async Task ConnectAndRunAsync(CancellationToken ct)
     {
         SetState(TunnelClientState.Connecting);
+
+        // Recreate the outbound channel for each connection attempt.
+        // The channel may have been completed by a previous CleanupConnectionAsync call.
+        _outboundChannel = CreateOutboundChannel();
 
         _webSocket = new ClientWebSocket();
         _connectionCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -208,7 +223,6 @@ public class TunnelClient : BackgroundService
             {
                 Id = m.Id,
                 ExternalDomain = m.ExternalDomain,
-                ExternalPort = m.ExternalPort,
                 InternalHost = m.InternalHost,
                 InternalPort = m.InternalPort,
                 InternalUseTls = m.InternalUseTls,
@@ -296,7 +310,6 @@ public class TunnelClient : BackgroundService
             {
                 Id = m.Id,
                 ExternalDomain = m.ExternalDomain,
-                ExternalPort = m.ExternalPort,
                 InternalHost = m.InternalHost,
                 InternalPort = m.InternalPort,
                 InternalUseTls = m.InternalUseTls,
@@ -436,7 +449,9 @@ public class TunnelClient : BackgroundService
 
             case HeartbeatAckMessage heartbeatAck:
                 var latency = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - heartbeatAck.Timestamp;
-                _logger.LogDebug("Heartbeat ack received (latency: {Latency}ms)", latency);
+                GatewayUptimeSeconds = heartbeatAck.GatewayUptimeSeconds;
+                _logger.LogDebug("Heartbeat ack received (latency: {Latency}ms, gateway uptime: {Uptime}s)",
+                    latency, GatewayUptimeSeconds);
                 break;
 
             case ConfigAckMessage configAck:

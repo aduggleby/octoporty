@@ -7,6 +7,7 @@ using System.Net;
 using FastEndpoints;
 using FluentValidation;
 using Octoporty.Agent.Data;
+using Octoporty.Agent.Services;
 using Octoporty.Shared.Entities;
 
 namespace Octoporty.Agent.Features.Mappings;
@@ -33,9 +34,6 @@ public class CreateMappingValidator : Validator<CreateMappingRequest>
             .MaximumLength(255)
             .Matches(@"^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?$")
             .WithMessage("Invalid domain format");
-
-        RuleFor(x => x.ExternalPort)
-            .InclusiveBetween(1, 65535);
 
         RuleFor(x => x.InternalHost)
             .NotEmpty()
@@ -88,11 +86,16 @@ public class CreateMappingValidator : Validator<CreateMappingRequest>
 public class CreateMappingEndpoint : Endpoint<CreateMappingRequest, MappingResponse>
 {
     private readonly OctoportyDbContext _db;
+    private readonly TunnelClient _tunnelClient;
     private readonly ILogger<CreateMappingEndpoint> _logger;
 
-    public CreateMappingEndpoint(OctoportyDbContext db, ILogger<CreateMappingEndpoint> logger)
+    public CreateMappingEndpoint(
+        OctoportyDbContext db,
+        TunnelClient tunnelClient,
+        ILogger<CreateMappingEndpoint> logger)
     {
         _db = db;
+        _tunnelClient = tunnelClient;
         _logger = logger;
     }
 
@@ -107,7 +110,6 @@ public class CreateMappingEndpoint : Endpoint<CreateMappingRequest, MappingRespo
         {
             Id = Guid.NewGuid(),
             ExternalDomain = req.ExternalDomain,
-            ExternalPort = req.ExternalPort,
             InternalHost = req.InternalHost,
             InternalPort = req.InternalPort,
             InternalUseTls = req.InternalUseTls,
@@ -121,6 +123,16 @@ public class CreateMappingEndpoint : Endpoint<CreateMappingRequest, MappingRespo
 
         _logger.LogInformation("Created port mapping {Id} for {Domain}", mapping.Id, mapping.ExternalDomain);
 
+        // Resync configuration with Gateway to apply the new mapping immediately
+        try
+        {
+            await _tunnelClient.ResyncConfigurationAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to resync configuration after create");
+        }
+
         await Send.CreatedAtAsync<GetMappingEndpoint>(
             new { id = mapping.Id },
             new MappingResponse
@@ -128,7 +140,6 @@ public class CreateMappingEndpoint : Endpoint<CreateMappingRequest, MappingRespo
                 Id = mapping.Id,
                 Name = mapping.Description ?? mapping.ExternalDomain,
                 ExternalDomain = mapping.ExternalDomain,
-                ExternalPort = mapping.ExternalPort,
                 InternalHost = mapping.InternalHost,
                 InternalPort = mapping.InternalPort,
                 InternalProtocol = mapping.InternalUseTls ? "Https" : "Http",

@@ -8,7 +8,6 @@ export interface PortMapping {
   id: string
   name: string
   externalDomain: string
-  externalPort: number
   internalHost: string
   internalPort: number
   internalProtocol: Protocol
@@ -21,7 +20,6 @@ export interface PortMapping {
 export interface CreateMappingRequest {
   name: string
   externalDomain: string
-  externalPort?: number
   internalHost: string
   internalPort: number
   internalProtocol: Protocol
@@ -46,6 +44,7 @@ export interface AgentStatus {
   activeMappings: number
   gatewayVersion?: string | null
   gatewayUpdateAvailable: boolean
+  gatewayUptime?: number | null
 }
 
 export interface ApiError {
@@ -80,6 +79,15 @@ export interface MappingStatusUpdate {
   status: 'Active' | 'Inactive' | 'Error'
   lastRequestAt?: string
   errorMessage?: string
+}
+
+// Gateway Log types
+export type LogLevel = 'Debug' | 'Info' | 'Warning' | 'Error'
+
+export interface GatewayLog {
+  timestamp: string
+  level: LogLevel
+  message: string
 }
 
 // Toast/Notification types

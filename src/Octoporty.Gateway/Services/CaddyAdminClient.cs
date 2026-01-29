@@ -77,7 +77,9 @@ public sealed class CaddyAdminClient : ICaddyAdminClient
                 new CaddyHandler
                 {
                     Handler = "reverse_proxy",
-                    Upstreams = [new CaddyUpstream { Dial = $"localhost:{_options.ListenPort}" }],
+                    // Use "gateway" as the Docker service hostname.
+                    // "localhost" doesn't work because Caddy runs in a separate container.
+                    Upstreams = [new CaddyUpstream { Dial = $"gateway:{_options.ListenPort}" }],
                     Headers = new CaddyHeaders
                     {
                         Request = new CaddyHeaderOps

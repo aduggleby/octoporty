@@ -26,17 +26,38 @@ export function MappingDetailPage() {
 
   // Fetch existing mapping
   useEffect(() => {
-    if (!isNew && id) {
-      api
-        .getMapping(id)
-        .then(setMapping)
-        .catch((err) => {
-          addToast('error', 'Failed to load mapping', err.message)
+    // Skip if this is a new mapping or no ID is provided
+    if (isNew || !id) {
+      setIsLoading(false)
+      return
+    }
+
+    // Ensure loading state is set
+    setIsLoading(true)
+    let cancelled = false
+
+    api
+      .getMapping(id)
+      .then((data) => {
+        if (!cancelled) {
+          setMapping(data)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          addToast('error', 'Failed to load mapping', err.message || 'Unknown error')
           navigate('/mappings')
-        })
-        .finally(() => {
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
           setIsLoading(false)
-        })
+        }
+      })
+
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      cancelled = true
     }
   }, [id, isNew, navigate, addToast])
 
@@ -230,7 +251,6 @@ export function MappingDetailPage() {
                   <span className="terminal-prompt">External</span>{' '}
                   <span className="terminal-command">
                     https://{mapping.externalDomain}
-                    {mapping.externalPort !== 443 ? `:${mapping.externalPort}` : ''}
                   </span>
                 </p>
                 <p className="text-text-muted my-2">

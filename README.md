@@ -330,6 +330,28 @@ Octoporty uses port range 17200-17299:
 
 The Agent includes an embedded React web application for managing port mappings.
 
+### Screenshots
+
+<p align="center">
+  <img src="website/public/screenshots/login.png" alt="Login Screen" width="400"/>
+  <br><em>Login Screen</em>
+</p>
+
+<p align="center">
+  <img src="website/public/screenshots/dashboard.png" alt="Dashboard" width="600"/>
+  <br><em>Dashboard - Overview of tunnel status</em>
+</p>
+
+<p align="center">
+  <img src="website/public/screenshots/mappings-list.png" alt="Mappings List" width="600"/>
+  <br><em>Mappings List - View and manage port mappings</em>
+</p>
+
+<p align="center">
+  <img src="website/public/screenshots/mapping-form.png" alt="Create Mapping" width="600"/>
+  <br><em>Create Mapping - Configure a new tunnel endpoint</em>
+</p>
+
 ### Features
 
 - **Dashboard** - Overview of tunnel status and active mappings

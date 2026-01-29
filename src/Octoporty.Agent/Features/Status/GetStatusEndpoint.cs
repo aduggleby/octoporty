@@ -56,7 +56,8 @@ public class GetStatusEndpoint : EndpointWithoutRequest<AgentStatusResponse>
             ActiveMappings = activeMappings,
             GatewayVersion = _tunnelClient.GatewayVersion,
             LastError = null, // Don't expose error details
-            GatewayUpdateAvailable = _tunnelClient.GatewayUpdateAvailable
+            GatewayUpdateAvailable = _tunnelClient.GatewayUpdateAvailable,
+            GatewayUptime = _tunnelClient.GatewayUptimeSeconds
         }, ct);
     }
 
