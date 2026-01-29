@@ -117,15 +117,12 @@ if (!string.IsNullOrEmpty(dbPath))
         }
         catch (Exception ex)
         {
-            // .NET chiseled images run as UID 1654 (the $APP_UID in the base image)
-            const string containerUid = "1654";
-
             throw new InvalidOperationException(
                 $"Data directory '{dataDir}' is not writable. " +
-                $"The container runs as UID {containerUid} (non-root, per .NET chiseled image defaults). " +
-                $"Fix permissions by setting the host directory ownership to match. " +
-                $"For TrueNAS SCALE: In the app config under Storage, set the Host Path's 'User ID' to {containerUid}. " +
-                $"For Docker Compose with bind mounts: Run 'sudo chown -R {containerUid}:{containerUid} /path/to/data' on the host. " +
+                $"For TrueNAS SCALE: Set 'User ID' to 568 in Security Context to run as the apps user, " +
+                $"and ensure your dataset is owned by the apps user (568:568). " +
+                $"For Docker Compose: Either set 'user: \"1000:1000\"' to match your host user, " +
+                $"or run 'sudo chown -R 1000:1000 /path/to/data' on the bind mount. " +
                 $"Error: {ex.Message}");
         }
     }

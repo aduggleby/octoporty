@@ -32,11 +32,6 @@ COPY --from=frontend /src/Octoporty.Agent/wwwroot /src/Octoporty.Agent/wwwroot
 WORKDIR /src/Octoporty.Agent
 RUN dotnet publish -c Release -o /app/publish /p:Version=${VERSION}
 
-# Create data directory for SQLite database with a placeholder file.
-# This will be copied to runtime with correct ownership for the non-root user.
-# The placeholder ensures the directory is copied (COPY ignores empty dirs).
-RUN mkdir -p /app/data && touch /app/data/.keep
-
 # Stage 3: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS runtime
 ARG VERSION=0.0.0
@@ -59,9 +54,8 @@ ENV DOTNET_RUNNING_IN_CONTAINER=true
 # Use --chown to ensure files are readable by the non-root app user in chiseled images
 COPY --from=build --chown=$APP_UID:$APP_UID /app/publish .
 
-# Create data directory for SQLite database with correct ownership.
-# Chiseled images have no shell, so we create an empty dir in build stage and copy it.
-# This ensures the non-root app user can write to /app/data when volume is mounted.
-COPY --from=build --chown=$APP_UID:$APP_UID /app/data /app/data
+# Note: /app/data is NOT pre-created in the image.
+# The app creates it at runtime, owned by whatever UID the container runs as.
+# This supports both default (UID 1654) and TrueNAS (UID 568 via Security Context).
 
 ENTRYPOINT ["dotnet", "Octoporty.Agent.dll"]
