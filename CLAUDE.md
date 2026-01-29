@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## User
+
+Address the user as **Mr. Octoporty**.
+
 ## CRITICAL: Server Access Restrictions
 
 **NEVER use SSH with personal key files from ~/.ssh/ to access ANY servers.**

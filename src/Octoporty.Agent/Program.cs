@@ -153,6 +153,15 @@ builder.Services.AddInternalServicesHttpClient();
 
 var app = builder.Build();
 
+// Apply database migrations on startup.
+// This ensures the database schema is up-to-date, including creating the database
+// if it doesn't exist (required for fresh installations in Docker containers).
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<OctoportyDbContext>();
+    dbContext.Database.Migrate();
+}
+
 // Static files for React SPA
 app.UseDefaultFiles();
 app.UseStaticFiles();
