@@ -55,6 +55,23 @@ if (string.IsNullOrWhiteSpace(agentOptions.Auth.Password))
         "Configure a strong password for the admin user.");
 }
 
+// Get current UID/GID for debugging container user issues
+var uid = "unknown";
+var gid = "unknown";
+if (OperatingSystem.IsLinux())
+{
+    try
+    {
+        // Read UID/GID from /proc/self/status
+        var status = File.ReadAllText("/proc/self/status");
+        var uidLine = status.Split('\n').FirstOrDefault(l => l.StartsWith("Uid:"));
+        var gidLine = status.Split('\n').FirstOrDefault(l => l.StartsWith("Gid:"));
+        if (uidLine != null) uid = uidLine.Split('\t')[1]; // Real UID
+        if (gidLine != null) gid = gidLine.Split('\t')[1]; // Real GID
+    }
+    catch { /* Ignore errors reading proc */ }
+}
+
 // Display startup banner with configuration
 StartupBanner.Print("Agent", new Dictionary<string, string?>
 {
@@ -63,7 +80,8 @@ StartupBanner.Print("Agent", new Dictionary<string, string?>
     ["JwtSecret"] = agentOptions.JwtSecret,
     ["Username"] = agentOptions.Auth.Username,
     ["Password"] = agentOptions.Auth.Password,
-    ["Environment"] = builder.Environment.EnvironmentName
+    ["Environment"] = builder.Environment.EnvironmentName,
+    ["Container UID:GID"] = $"{uid}:{gid}"
 });
 
 // Add routing (required for MapGet, MapHub, etc.)
