@@ -398,7 +398,7 @@ dotnet test --filter "FullyQualifiedName~ComprehensiveUi"
 - Motion (animations)
 
 **Infrastructure:**
-- Docker (chiseled images)
+- Docker (multi-arch images for amd64/arm64)
 - Caddy (reverse proxy + auto HTTPS)
 - GitHub Container Registry
 

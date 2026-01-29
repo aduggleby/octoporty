@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.33
+
+**2026-01-29**
+
+- Improve Docker container compatibility for platforms requiring custom user IDs
+
+---
+
 ## 0.9.32
 
 **2026-01-29**
@@ -232,7 +240,7 @@ Initial release of Octoporty - a self-hosted reverse proxy tunneling solution.
 
 **Infrastructure:**
 
-- Docker deployment with chiseled images
+- Docker deployment with multi-arch images (amd64/arm64)
 - GitHub Container Registry for image distribution
 - Caddy reverse proxy integration
 - SQLite database for Agent configuration storage
