@@ -1,7 +1,12 @@
 # Dockerfile
 # Multi-stage build for Octoporty Gateway.
-# Uses .NET 10 SDK for build and chiseled runtime for minimal attack surface.
+# Uses .NET 10 SDK for build and runtime image (non-chiseled for UID flexibility).
 # Gateway listens on port 17200 for WebSocket and HTTP traffic.
+#
+# UID Compatibility:
+# - Uses regular aspnet image (not chiseled) to support arbitrary UID override
+# - Default is UID 1654 (APP_UID) when no override is specified
+# - Chiseled images segfault when run as different UID because files are owned by 1654
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG VERSION=0.0.0
@@ -16,7 +21,9 @@ COPY Octoporty.Gateway/ Octoporty.Gateway/
 WORKDIR /src/Octoporty.Gateway
 RUN dotnet publish -c Release -o /app/publish /p:Version=${VERSION}
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS runtime
+# Use regular aspnet image (not chiseled) to support arbitrary UID override via --user flag.
+# Chiseled images have files owned by UID 1654 and segfault when run as different UID.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS runtime
 ARG VERSION=0.0.0
 WORKDIR /app
 
@@ -34,6 +41,7 @@ ENV ASPNETCORE_URLS=http://+:17200
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 
-# Use --chown to ensure files are readable by the non-root app user in chiseled images
-COPY --from=build --chown=$APP_UID:$APP_UID /app/publish .
+# Files are copied with world-readable permissions so any UID can access them.
+# The --chmod flag ensures files/dirs are readable regardless of build stage umask.
+COPY --from=build --chmod=755 /app/publish .
 ENTRYPOINT ["dotnet", "Octoporty.Gateway.dll"]

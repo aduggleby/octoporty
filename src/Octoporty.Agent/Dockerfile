@@ -2,8 +2,14 @@
 # Multi-stage build for Octoporty Agent.
 # Stage 1: Build React frontend with Node.js
 # Stage 2: Build .NET backend with SDK
-# Stage 3: Chiseled runtime for minimal attack surface.
+# Stage 3: Runtime image (non-chiseled for UID flexibility)
 # Agent listens on port 17201 for web UI and API.
+#
+# UID Compatibility:
+# - Uses regular aspnet image (not chiseled) to support arbitrary UID override
+# - TrueNAS SCALE runs containers as UID 568 by default
+# - Default is UID 1654 (APP_UID) when no override is specified
+# - Chiseled images segfault when run as different UID because files are owned by 1654
 
 # Stage 1: Build React frontend
 FROM node:22-alpine AS frontend
@@ -33,7 +39,10 @@ WORKDIR /src/Octoporty.Agent
 RUN dotnet publish -c Release -o /app/publish /p:Version=${VERSION}
 
 # Stage 3: Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS runtime
+# Use regular aspnet image (not chiseled) to support arbitrary UID override via --user flag.
+# Chiseled images have files owned by UID 1654 and segfault when run as different UID.
+# Regular images have root-owned files (world-readable) that work with any UID.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS runtime
 ARG VERSION=0.0.0
 WORKDIR /app
 
@@ -51,8 +60,9 @@ ENV ASPNETCORE_URLS=http://+:17201
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 
-# Use --chown to ensure files are readable by the non-root app user in chiseled images
-COPY --from=build --chown=$APP_UID:$APP_UID /app/publish .
+# Files are copied with world-readable permissions so any UID can access them.
+# The --chmod flag ensures files/dirs are readable regardless of build stage umask.
+COPY --from=build --chmod=755 /app/publish .
 
 # Note: /app/data is NOT pre-created in the image.
 # The app creates it at runtime, owned by whatever UID the container runs as.

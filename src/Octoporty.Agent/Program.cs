@@ -19,7 +19,7 @@ using Octoporty.Shared.Options;
 using Octoporty.Shared.Startup;
 
 // Use SlimBuilder to avoid default config file loading with reloadOnChange: true
-// which fails in read-only containers (chiseled images)
+// which can cause issues in containers with read-only filesystems
 var builder = WebApplication.CreateSlimBuilder(args);
 
 // Manually configure settings that SlimBuilder doesn't include
@@ -130,8 +130,8 @@ if (!string.IsNullOrEmpty(dbPath))
             {
                 throw new InvalidOperationException(
                     $"Cannot create data directory '{dataDir}'. " +
-                    $"Ensure the volume/bind mount exists and is writable by UID 1654 (the app user in chiseled containers). " +
-                    $"For TrueNAS: Set dataset permissions to UID 1654 or use 'Apps' preset. " +
+                    $"Ensure the volume/bind mount exists and is writable by the container user (UID {uid}). " +
+                    $"For TrueNAS: Use the 'Apps' dataset preset or set permissions to UID 568. " +
                     $"Error: {ex.Message}");
             }
         }
