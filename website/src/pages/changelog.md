@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.27
+
+**2026-01-29**
+
+- Fix data directory ownership in Docker containers for correct database permissions
+
+---
+
 ## 0.9.26
 
 **2026-01-29**
