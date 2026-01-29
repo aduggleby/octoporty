@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'motion/react'
 import { useToast } from '../hooks/useToast'
+import { useError } from '../components/ErrorBoundary'
 import { useSignalR } from '../hooks/useSignalR'
 import { api } from '../api/client'
 import type { AgentStatus, GatewayLog, GatewayLogItem } from '../types'
@@ -21,6 +22,7 @@ interface LogEntry {
 
 export function GatewayPage() {
   const { addToast } = useToast()
+  const { showError } = useError()
   const [status, setStatus] = useState<AgentStatus | null>(null)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -60,9 +62,11 @@ export function GatewayPage() {
         }
       })
       .catch((err) => {
-        console.error('Failed to load initial logs:', err)
+        const message = err?.message || 'Unknown error'
+        const details = err?.errors?.serializerErrors?.join('\n') || JSON.stringify(err, null, 2)
+        showError('Failed to Load Logs', message, details)
       })
-  }, [])
+  }, [showError])
 
   // Handle SignalR gateway log updates (real-time)
   const handleGatewayLog = useCallback((log: GatewayLog) => {
@@ -117,12 +121,15 @@ export function GatewayPage() {
       } else {
         setHasMore(false)
       }
-    } catch (err) {
-      console.error('Failed to load more logs:', err)
+    } catch (err: unknown) {
+      const error = err as { message?: string; errors?: { serializerErrors?: string[] } }
+      const message = error?.message || 'Unknown error'
+      const details = error?.errors?.serializerErrors?.join('\n') || JSON.stringify(err, null, 2)
+      showError('Failed to Load More Logs', message, details)
     } finally {
       setIsLoadingMore(false)
     }
-  }, [isLoadingMore, hasMore, logs])
+  }, [isLoadingMore, hasMore, logs, showError])
 
   // Handle scroll to detect when at top
   const handleScroll = useCallback(() => {

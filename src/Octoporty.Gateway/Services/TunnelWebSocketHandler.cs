@@ -24,7 +24,8 @@ public class TunnelWebSocketHandler
     private readonly ILoggerFactory _loggerFactory;
     private readonly GatewayOptions _options;
 
-    private const string GatewayVersion = "1.0.0";
+    private static readonly string GatewayVersion = typeof(TunnelWebSocketHandler).Assembly
+        .GetName().Version?.ToString(3) ?? "0.0.0";
 
     public TunnelWebSocketHandler(
         TunnelConnectionManager connectionManager,

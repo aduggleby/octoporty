@@ -9,20 +9,6 @@ using Octoporty.Shared.Contracts;
 
 namespace Octoporty.Agent.Features.Gateway;
 
-public class GetLogsRequest
-{
-    /// <summary>
-    /// Return logs with ID less than this value.
-    /// Use 0 or omit for the latest logs.
-    /// </summary>
-    public long BeforeId { get; set; }
-
-    /// <summary>
-    /// Maximum number of logs to return (default: 1000, max: 5000).
-    /// </summary>
-    public int Count { get; set; } = 1000;
-}
-
 public class GetLogsResponse
 {
     public required bool Success { get; init; }
@@ -39,7 +25,7 @@ public class GatewayLogItem
     public required string Message { get; init; }
 }
 
-public class GetLogsEndpoint : Endpoint<GetLogsRequest, GetLogsResponse>
+public class GetLogsEndpoint : EndpointWithoutRequest<GetLogsResponse>
 {
     private readonly TunnelClient _tunnelClient;
     private readonly ILogger<GetLogsEndpoint> _logger;
@@ -58,10 +44,23 @@ public class GetLogsEndpoint : Endpoint<GetLogsRequest, GetLogsResponse>
             .WithDescription("Retrieves historical logs from the Gateway with pagination support"));
     }
 
-    public override async Task HandleAsync(GetLogsRequest req, CancellationToken ct)
+    public override async Task HandleAsync(CancellationToken ct)
     {
-        // Validate and clamp count
-        var count = Math.Clamp(req.Count, 1, 5000);
+        // Parse query parameters manually
+        var beforeIdStr = Query<string>("beforeId", isRequired: false);
+        var countStr = Query<string>("count", isRequired: false);
+
+        long beforeId = 0;
+        if (!string.IsNullOrEmpty(beforeIdStr) && long.TryParse(beforeIdStr, out var parsedBeforeId))
+        {
+            beforeId = parsedBeforeId;
+        }
+
+        int count = 1000;
+        if (!string.IsNullOrEmpty(countStr) && int.TryParse(countStr, out var parsedCount))
+        {
+            count = Math.Clamp(parsedCount, 1, 5000);
+        }
 
         // Check if connected
         if (_tunnelClient.State != TunnelClientState.Connected)
@@ -79,7 +78,7 @@ public class GetLogsEndpoint : Endpoint<GetLogsRequest, GetLogsResponse>
 
         try
         {
-            var response = await _tunnelClient.GetGatewayLogsAsync(req.BeforeId, count, ct);
+            var response = await _tunnelClient.GetGatewayLogsAsync(beforeId, count, ct);
 
             await Send.OkAsync(new GetLogsResponse
             {

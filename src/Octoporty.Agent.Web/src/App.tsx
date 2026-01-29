@@ -11,6 +11,7 @@ import {
 } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ToastProvider } from './hooks/useToast'
+import { ErrorBoundary, ErrorProvider } from './components/ErrorBoundary'
 import { LoginPage } from './pages/Login'
 import { DashboardPage } from './pages/Dashboard'
 import { MappingsPage } from './pages/Mappings'
@@ -41,8 +42,10 @@ function PublicRoute({ children }: { children: ReactNode }) {
 
 export function App() {
   return (
-    <ToastProvider>
-      <BrowserRouter>
+    <ErrorBoundary>
+      <ErrorProvider>
+        <ToastProvider>
+          <BrowserRouter>
         <Routes>
           {/* Public routes */}
           <Route
@@ -102,8 +105,10 @@ export function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </BrowserRouter>
-    </ToastProvider>
+          </BrowserRouter>
+        </ToastProvider>
+      </ErrorProvider>
+    </ErrorBoundary>
   )
 }
 

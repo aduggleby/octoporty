@@ -34,7 +34,8 @@ public class TunnelClient : BackgroundService
     private TaskCompletionSource<UpdateResponseMessage>? _pendingUpdateResponse;
     private TaskCompletionSource<GetLogsResponseMessage>? _pendingLogsResponse;
 
-    private const string AgentVersion = "1.0.0";
+    private static readonly string AgentVersion = typeof(TunnelClient).Assembly
+        .GetName().Version?.ToString(3) ?? "0.0.0";
     private const int HeartbeatIntervalSeconds = 30;
 
     public TunnelClientState State { get; private set; } = TunnelClientState.Disconnected;
