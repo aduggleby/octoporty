@@ -137,9 +137,9 @@ export function MappingsPage() {
 
       {/* Filters and Controls */}
       <div className="panel mb-6">
-        <div className="p-4 flex flex-col md:flex-row md:items-center gap-4">
-          {/* Search */}
-          <div className="relative flex-1">
+        <div className="p-4 flex flex-col gap-4">
+          {/* Search Row */}
+          <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <svg
                 className="w-4 h-4 text-text-muted"
@@ -155,84 +155,88 @@ export function MappingsPage() {
             </div>
             <input
               type="text"
-              className="input pl-11 py-2"
+              className="input py-2"
+              style={{ paddingLeft: '2.75rem' }}
               placeholder="Search mappings..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          {/* Filter Pills */}
-          <div className="flex items-center gap-2">
-            <button
-              className={clsx(
-                'px-3 py-1.5 rounded-md font-mono text-xs font-semibold transition-colors',
-                filter === 'all'
-                  ? 'bg-cyan-glow text-cyan-base border border-cyan-dim'
-                  : 'bg-surface-2 text-text-secondary hover:text-text-primary'
-              )}
-              onClick={() => setFilter('all')}
-            >
-              All ({mappings.length})
-            </button>
-            <button
-              className={clsx(
-                'px-3 py-1.5 rounded-md font-mono text-xs font-semibold transition-colors',
-                filter === 'active'
-                  ? 'bg-emerald-glow text-emerald-base border border-emerald-dim'
-                  : 'bg-surface-2 text-text-secondary hover:text-text-primary'
-              )}
-              onClick={() => setFilter('active')}
-            >
-              Active ({activeCount})
-            </button>
-            <button
-              className={clsx(
-                'px-3 py-1.5 rounded-md font-mono text-xs font-semibold transition-colors',
-                filter === 'disabled'
-                  ? 'bg-amber-glow text-amber-base border border-amber-dim'
-                  : 'bg-surface-2 text-text-secondary hover:text-text-primary'
-              )}
-              onClick={() => setFilter('disabled')}
-            >
-              Disabled ({disabledCount})
-            </button>
-          </div>
+          {/* Filter Pills and View Toggle Row */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Filter Pills */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                className={clsx(
+                  'px-3 py-1.5 rounded-md font-mono text-xs font-semibold whitespace-nowrap transition-colors',
+                  filter === 'all'
+                    ? 'bg-cyan-glow text-cyan-base border border-cyan-dim'
+                    : 'bg-surface-2 text-text-secondary hover:text-text-primary'
+                )}
+                onClick={() => setFilter('all')}
+              >
+                All ({mappings.length})
+              </button>
+              <button
+                className={clsx(
+                  'px-3 py-1.5 rounded-md font-mono text-xs font-semibold whitespace-nowrap transition-colors',
+                  filter === 'active'
+                    ? 'bg-emerald-glow text-emerald-base border border-emerald-dim'
+                    : 'bg-surface-2 text-text-secondary hover:text-text-primary'
+                )}
+                onClick={() => setFilter('active')}
+              >
+                Active ({activeCount})
+              </button>
+              <button
+                className={clsx(
+                  'px-3 py-1.5 rounded-md font-mono text-xs font-semibold whitespace-nowrap transition-colors',
+                  filter === 'disabled'
+                    ? 'bg-amber-glow text-amber-base border border-amber-dim'
+                    : 'bg-surface-2 text-text-secondary hover:text-text-primary'
+                )}
+                onClick={() => setFilter('disabled')}
+              >
+                Disabled ({disabledCount})
+              </button>
+            </div>
 
-          {/* View Toggle */}
-          <div className="flex items-center gap-1 bg-surface-2 rounded-md p-1">
-            <button
-              className={clsx(
-                'p-2 rounded transition-colors',
-                viewMode === 'grid'
-                  ? 'bg-surface-4 text-text-primary'
-                  : 'text-text-muted hover:text-text-secondary'
-              )}
-              onClick={() => setViewMode('grid')}
-              title="Grid view"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-              </svg>
-            </button>
-            <button
-              className={clsx(
-                'p-2 rounded transition-colors',
-                viewMode === 'table'
-                  ? 'bg-surface-4 text-text-primary'
-                  : 'text-text-muted hover:text-text-secondary'
-              )}
-              onClick={() => setViewMode('table')}
-              title="Table view"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
+            {/* View Toggle */}
+            <div className="flex items-center gap-1 bg-surface-2 rounded-md p-1 shrink-0">
+              <button
+                className={clsx(
+                  'p-2 rounded transition-colors',
+                  viewMode === 'grid'
+                    ? 'bg-surface-4 text-text-primary'
+                    : 'text-text-muted hover:text-text-secondary'
+                )}
+                onClick={() => setViewMode('grid')}
+                title="Grid view"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              </button>
+              <button
+                className={clsx(
+                  'p-2 rounded transition-colors',
+                  viewMode === 'table'
+                    ? 'bg-surface-4 text-text-primary'
+                    : 'text-text-muted hover:text-text-secondary'
+                )}
+                onClick={() => setViewMode('table')}
+                title="Table view"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>

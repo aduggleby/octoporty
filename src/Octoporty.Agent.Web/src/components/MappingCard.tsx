@@ -154,10 +154,10 @@ export function MappingCard({
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => onEdit?.(mapping)}
-            className="btn btn-ghost btn-sm"
+            className="btn btn-ghost btn-sm whitespace-nowrap"
           >
             <svg
-              className="w-4 h-4"
+              className="w-4 h-4 shrink-0"
               viewBox="0 0 20 20"
               fill="currentColor"
             >
@@ -167,10 +167,10 @@ export function MappingCard({
           </button>
           <button
             onClick={() => onDelete?.(mapping)}
-            className="btn btn-ghost btn-sm text-rose-base hover:bg-rose-glow"
+            className="btn btn-ghost btn-sm whitespace-nowrap text-rose-base hover:bg-rose-glow"
           >
             <svg
-              className="w-4 h-4"
+              className="w-4 h-4 shrink-0"
               viewBox="0 0 20 20"
               fill="currentColor"
             >
@@ -231,19 +231,19 @@ export function MappingRow({
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => onToggle?.(mapping, !mapping.enabled)}
-            className="btn btn-ghost btn-sm"
+            className="btn btn-ghost btn-sm whitespace-nowrap"
           >
             {mapping.enabled ? 'Disable' : 'Enable'}
           </button>
           <button
             onClick={() => onEdit?.(mapping)}
-            className="btn btn-ghost btn-sm"
+            className="btn btn-ghost btn-sm whitespace-nowrap"
           >
             Edit
           </button>
           <button
             onClick={() => onDelete?.(mapping)}
-            className="btn btn-ghost btn-sm text-rose-base"
+            className="btn btn-ghost btn-sm whitespace-nowrap text-rose-base"
           >
             Delete
           </button>
