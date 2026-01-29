@@ -1,13 +1,13 @@
 #!/bin/bash
 # update-gateway.sh
 # Octoporty Gateway update script
-# Version: 0.9.34
+# Version: 0.9.35
 # Usage: curl -fsSL https://octoporty.com/update-gateway.sh | bash
 
 set -e
 
 INSTALL_DIR="/opt/octoporty/gateway"
-SCRIPT_VERSION="0.9.34"
+SCRIPT_VERSION="0.9.35"
 IMAGE="ghcr.io/aduggleby/octoporty-gateway:latest"
 
 cat << 'EOF'

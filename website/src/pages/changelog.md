@@ -30,6 +30,15 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.35
+
+**2026-01-29**
+
+- Remove light theme, keep dark mode only
+- Internal improvements
+
+---
+
 ## 0.9.34
 
 **2026-01-29**
