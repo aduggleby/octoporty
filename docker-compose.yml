@@ -6,7 +6,6 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - ConnectionStrings__DefaultConnection=${AGENT_CONNECTION_STRING}
       - Agent__GatewayUrl=${AGENT_GATEWAY_URL}
       - Agent__ApiKey=${AGENT_API_KEY}
       - Agent__Auth__Username=${AGENT_AUTH_USERNAME:-admin}
@@ -17,6 +16,7 @@ services:
       - Logging__FilePath=/var/log/octoporty/agent-.log
     volumes:
       - agent-logs:/var/log/octoporty
+      - agent-data:/app/data
     restart: unless-stopped
 
   gateway:
@@ -40,4 +40,5 @@ services:
 
 volumes:
   agent-logs:
+  agent-data:
   gateway-logs:

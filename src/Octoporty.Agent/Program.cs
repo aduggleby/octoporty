@@ -70,8 +70,14 @@ StartupBanner.Print("Agent", new Dictionary<string, string?>
 builder.Services.AddRouting();
 
 // Database (SQLite for lightweight local storage)
+// Default to /app/data/octoporty.db which is the expected volume mount location in Docker.
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connectionString))
+{
+    connectionString = "Data Source=/app/data/octoporty.db";
+}
 builder.Services.AddDbContext<OctoportyDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(connectionString));
 
 // JWT Authentication with cookie support (HIGH-01)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

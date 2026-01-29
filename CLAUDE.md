@@ -98,11 +98,11 @@ Internet → Caddy → Gateway (Hetzner) ←WebSocket→ Agent (private network)
 
 ## Database
 
-SQL Server with EF Core. Main entities:
+SQLite with EF Core. Main entities:
 - `PortMapping` - ExternalDomain (unique), InternalHost:Port, TLS options
 - `ConnectionLog`, `RequestLog` - Audit history
 
-Migrations in `src/Octoporty.Agent/Data/Migrations/`
+Migrations in `src/Octoporty.Agent/Migrations/`
 
 ## Code Style
 
