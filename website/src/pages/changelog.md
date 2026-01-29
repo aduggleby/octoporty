@@ -30,6 +30,22 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.25
+
+**2026-01-29**
+
+- Version bump for release consistency
+
+---
+
+## 0.9.24
+
+**2026-01-29**
+
+- Auto-apply database migrations on Agent startup - fresh Docker installations now create the database automatically without manual migration steps
+
+---
+
 ## 0.9.23
 
 **2026-01-28**

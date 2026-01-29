@@ -50,6 +50,7 @@ Octoporty is a self-hosted alternative to ngrok that lets you expose internal se
 - **Request Logging** - Audit trail for all tunneled requests
 - **Rate Limiting** - Built-in protection against brute force attacks
 - **Startup Banner** - Visual configuration display at startup with obfuscated secrets for easy verification
+- **Automatic Database Setup** - Agent auto-applies migrations on startup, no manual database setup required
 - **Docker Ready** - Multi-arch container images (amd64/arm64) with minimal attack surface
 
 ## Architecture
