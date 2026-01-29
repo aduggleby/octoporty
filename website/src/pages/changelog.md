@@ -30,6 +30,15 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.38
+
+**2026-01-29**
+
+- Add error boundary for improved crash recovery in the web UI
+- Improve Gateway log error handling
+
+---
+
 ## 0.9.37
 
 **2026-01-29**
