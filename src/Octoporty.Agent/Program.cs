@@ -76,6 +76,60 @@ if (string.IsNullOrEmpty(connectionString))
 {
     connectionString = "Data Source=/app/data/octoporty.db";
 }
+
+// Validate that the data directory exists and is writable before proceeding.
+// This catches permission issues early with a clear error message, rather than
+// letting EF Core fail with a cryptic "unable to open database file" error.
+var dbPath = connectionString
+    .Split(';')
+    .Select(p => p.Trim())
+    .FirstOrDefault(p => p.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+    ?.Substring("Data Source=".Length);
+
+if (!string.IsNullOrEmpty(dbPath))
+{
+    var dataDir = Path.GetDirectoryName(dbPath);
+    if (!string.IsNullOrEmpty(dataDir))
+    {
+        // Try to create the directory if it doesn't exist
+        if (!Directory.Exists(dataDir))
+        {
+            try
+            {
+                Directory.CreateDirectory(dataDir);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot create data directory '{dataDir}'. " +
+                    $"Ensure the volume/bind mount exists and is writable by UID 1654 (the app user in chiseled containers). " +
+                    $"For TrueNAS: Set dataset permissions to UID 1654 or use 'Apps' preset. " +
+                    $"Error: {ex.Message}");
+            }
+        }
+
+        // Verify the directory is writable by attempting to create a temp file
+        var testFile = Path.Combine(dataDir, $".write-test-{Guid.NewGuid()}");
+        try
+        {
+            File.WriteAllText(testFile, "test");
+            File.Delete(testFile);
+        }
+        catch (Exception ex)
+        {
+            // .NET chiseled images run as UID 1654 (the $APP_UID in the base image)
+            const string containerUid = "1654";
+
+            throw new InvalidOperationException(
+                $"Data directory '{dataDir}' is not writable. " +
+                $"The container runs as UID {containerUid} (non-root, per .NET chiseled image defaults). " +
+                $"Fix permissions by setting the host directory ownership to match. " +
+                $"For TrueNAS SCALE: In the app config under Storage, set the Host Path's 'User ID' to {containerUid}. " +
+                $"For Docker Compose with bind mounts: Run 'sudo chown -R {containerUid}:{containerUid} /path/to/data' on the host. " +
+                $"Error: {ex.Message}");
+        }
+    }
+}
 builder.Services.AddDbContext<OctoportyDbContext>(options =>
     options.UseSqlite(connectionString));
 

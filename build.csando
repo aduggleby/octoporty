@@ -66,8 +66,8 @@ else
     if (publish)
     {
         // Build multi-arch images (amd64 + arm64) and push directly to GHCR
-        // Using buildx with --push to build and push in one step
-        Docker.Buildx("./src/Octoporty.Gateway/Dockerfile", o => o
+        // Docker.Build with WithPlatforms uses buildx under the hood (ANDO v0.9.57+)
+        Docker.Build("./src/Octoporty.Gateway/Dockerfile", o => o
             .WithPlatforms("linux/amd64", "linux/arm64")
             .WithTag($"ghcr.io/aduggleby/octoporty-gateway:{version}")
             .WithTag("ghcr.io/aduggleby/octoporty-gateway:latest")
@@ -75,7 +75,7 @@ else
             .WithContext("./src")
             .WithPush());
 
-        Docker.Buildx("./src/Octoporty.Agent/Dockerfile", o => o
+        Docker.Build("./src/Octoporty.Agent/Dockerfile", o => o
             .WithPlatforms("linux/amd64", "linux/arm64")
             .WithTag($"ghcr.io/aduggleby/octoporty-agent:{version}")
             .WithTag("ghcr.io/aduggleby/octoporty-agent:latest")

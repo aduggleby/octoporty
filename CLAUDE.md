@@ -270,6 +270,8 @@ Environment variables (see `.env.example`):
 
 ## ANDO Build System
 
+**Documentation:** https://andobuild.com (LLMs.txt available at https://andobuild.com/llms.txt)
+
 **Build logs** are always saved to `build.csando.log` next to the `build.csando` file.
 
 **Profiles:**
