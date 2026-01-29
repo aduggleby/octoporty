@@ -507,15 +507,18 @@ Example Agent output:
   ╚██████╔╝╚██████╗   ██║   ╚██████╔╝██║     ╚██████╔╝██║  ██║   ██║      ██║
    ╚═════╝  ╚═════╝   ╚═╝    ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═╝
 
-  Agent v0.9.20
+  Agent v0.9.30
   ─────────────────────────────────────────────────────────────────────────
-  GatewayUrl    : wss://gateway.example.com/tunnel
-  ApiKey        : my****ey
-  JwtSecret     : se****et
-  Username      : admin
-  Password      : pa****rd
-  Environment   : Production
+  GatewayUrl       : wss://gateway.example.com/tunnel
+  ApiKey           : my****ey
+  JwtSecret        : se****et
+  Username         : admin
+  Password         : pa****rd
+  Environment      : Production
+  Container UID:GID: 1000:1000
 ```
+
+The `Container UID:GID` field displays the effective user and group IDs the process is running as (Linux only). This helps diagnose permission issues when the container can't write to mounted volumes.
 
 ### Logs
 

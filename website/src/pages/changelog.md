@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.30
+
+**2026-01-29**
+
+- Display container user and group IDs in startup banner for easier debugging of permission issues
+
+---
+
 ## 0.9.29
 
 **2026-01-29**
