@@ -91,24 +91,15 @@ export function Layout({ children }: LayoutProps) {
         <div className="sidebar-header">
           <div className="flex items-center gap-3">
             <motion.div
-              className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-base to-cyan-dim flex items-center justify-center"
+              className="w-10 h-10 rounded-lg overflow-hidden"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <svg
-                className="w-6 h-6 text-surface-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="12" cy="10" r="5" />
-                <path d="M7 13 L3 20" />
-                <path d="M9 14 L6 22" />
-                <path d="M12 15 L12 23" />
-                <path d="M15 14 L18 22" />
-                <path d="M17 13 L21 20" />
-              </svg>
+              <img
+                src="/octoporty_logo.png"
+                alt="Octoporty"
+                className="w-full h-full object-cover"
+              />
             </motion.div>
             <div>
               <h1 className="font-display text-lg font-bold text-text-primary tracking-tight">

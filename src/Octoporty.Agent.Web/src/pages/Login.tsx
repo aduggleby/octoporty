@@ -91,31 +91,16 @@ export function LoginPage() {
         <div className="p-8 text-center border-b border-border-subtle">
           {/* Logo */}
           <motion.div
-            className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-cyan-base/20 to-cyan-dim/10 border border-cyan-dim flex items-center justify-center"
+            className="w-20 h-20 mx-auto mb-6 rounded-2xl overflow-hidden"
             initial={{ rotate: -10 }}
             animate={{ rotate: 0 }}
             transition={{ type: 'spring', stiffness: 200 }}
           >
-            <svg
-              className="w-10 h-10 text-cyan-base"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <circle cx="12" cy="10" r="5" />
-              <path d="M7 13 L3 20" strokeLinecap="round" />
-              <path d="M9 14 L6 22" strokeLinecap="round" />
-              <path d="M12 15 L12 23" strokeLinecap="round" />
-              <path d="M15 14 L18 22" strokeLinecap="round" />
-              <path d="M17 13 L21 20" strokeLinecap="round" />
-              {/* Port dots */}
-              <circle cx="3" cy="20" r="1.5" fill="currentColor" />
-              <circle cx="6" cy="22" r="1.5" fill="currentColor" />
-              <circle cx="12" cy="23" r="1.5" fill="currentColor" />
-              <circle cx="18" cy="22" r="1.5" fill="currentColor" />
-              <circle cx="21" cy="20" r="1.5" fill="currentColor" />
-            </svg>
+            <img
+              src="/octoporty_logo.png"
+              alt="Octoporty"
+              className="w-full h-full object-cover"
+            />
           </motion.div>
 
           <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight">
