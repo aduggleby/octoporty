@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.40
+
+**2026-01-29**
+
+- Make screenshots clickable with hover effects on the website
+
+---
+
 ## 0.9.39
 
 **2026-01-29**
