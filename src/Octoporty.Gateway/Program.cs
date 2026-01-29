@@ -38,6 +38,7 @@ builder.Services.Configure<LoggingOptions>(builder.Configuration.GetSection("Log
 builder.Services.AddRouting();
 
 builder.Services.AddSingleton<GatewayState>();
+builder.Services.AddSingleton<GatewayLogBuffer>();
 builder.Services.AddSingleton<TunnelConnectionManager>();
 builder.Services.AddSingleton<ITunnelConnectionManager>(sp => sp.GetRequiredService<TunnelConnectionManager>());
 builder.Services.AddSingleton<UpdateService>();
@@ -49,6 +50,7 @@ var app = builder.Build();
 // Add tunnel log sink for forwarding logs to Agent
 // This must be done after app is built so we can access TunnelConnectionManager
 var tunnelConnectionManager = app.Services.GetRequiredService<TunnelConnectionManager>();
+var logBuffer = app.Services.GetRequiredService<GatewayLogBuffer>();
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(app.Configuration)
     .MinimumLevel.Information()
@@ -57,7 +59,7 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Console(
         outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-    .WriteTo.Sink(new TunnelLogSink(() => tunnelConnectionManager))
+    .WriteTo.Sink(new TunnelLogSink(() => tunnelConnectionManager, logBuffer))
     .CreateLogger();
 
 // Validate required configuration at startup

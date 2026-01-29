@@ -20,5 +20,7 @@ public enum MessageType : byte
     UpdateRequest = 12,
     UpdateResponse = 13,
     GatewayLog = 14,
+    GetLogsRequest = 15,
+    GetLogsResponse = 16,
     Error = 255
 }

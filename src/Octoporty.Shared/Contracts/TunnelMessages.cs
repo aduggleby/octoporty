@@ -22,6 +22,8 @@ namespace Octoporty.Shared.Contracts;
 [Union(12, typeof(UpdateRequestMessage))]
 [Union(13, typeof(UpdateResponseMessage))]
 [Union(14, typeof(GatewayLogMessage))]
+[Union(15, typeof(GetLogsRequestMessage))]
+[Union(16, typeof(GetLogsResponseMessage))]
 public abstract class TunnelMessage
 {
     [IgnoreMember]
@@ -331,4 +333,81 @@ public enum GatewayLogLevel : byte
     Info = 1,
     Warning = 2,
     Error = 3
+}
+
+/// <summary>
+/// Request from Agent to get historical Gateway logs.
+/// Used for initial log loading and infinite scroll.
+/// </summary>
+[MessagePackObject]
+public sealed class GetLogsRequestMessage : TunnelMessage
+{
+    [IgnoreMember]
+    public override MessageType Type => MessageType.GetLogsRequest;
+
+    /// <summary>
+    /// Unique request ID for correlation.
+    /// </summary>
+    [Key(0)]
+    public required string RequestId { get; init; }
+
+    /// <summary>
+    /// Return logs with ID less than this value.
+    /// Use 0 for the latest logs.
+    /// </summary>
+    [Key(1)]
+    public long BeforeId { get; init; }
+
+    /// <summary>
+    /// Maximum number of logs to return.
+    /// </summary>
+    [Key(2)]
+    public int Count { get; init; }
+}
+
+/// <summary>
+/// Response containing historical Gateway logs.
+/// </summary>
+[MessagePackObject]
+public sealed class GetLogsResponseMessage : TunnelMessage
+{
+    [IgnoreMember]
+    public override MessageType Type => MessageType.GetLogsResponse;
+
+    /// <summary>
+    /// Request ID for correlation.
+    /// </summary>
+    [Key(0)]
+    public required string RequestId { get; init; }
+
+    /// <summary>
+    /// Log entries in reverse chronological order (newest first).
+    /// </summary>
+    [Key(1)]
+    public required GatewayLogDto[] Logs { get; init; }
+
+    /// <summary>
+    /// Whether there are more older logs available.
+    /// </summary>
+    [Key(2)]
+    public bool HasMore { get; init; }
+}
+
+/// <summary>
+/// DTO for a single log entry with ID for pagination.
+/// </summary>
+[MessagePackObject]
+public sealed class GatewayLogDto
+{
+    [Key(0)]
+    public long Id { get; init; }
+
+    [Key(1)]
+    public DateTime Timestamp { get; init; }
+
+    [Key(2)]
+    public GatewayLogLevel Level { get; init; }
+
+    [Key(3)]
+    public required string Message { get; init; }
 }

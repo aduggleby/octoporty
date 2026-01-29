@@ -19,6 +19,7 @@ public class TunnelWebSocketHandler
     private readonly ICaddyAdminClient _caddyClient;
     private readonly UpdateService _updateService;
     private readonly GatewayState _gatewayState;
+    private readonly GatewayLogBuffer _logBuffer;
     private readonly ILogger<TunnelWebSocketHandler> _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly GatewayOptions _options;
@@ -30,6 +31,7 @@ public class TunnelWebSocketHandler
         ICaddyAdminClient caddyClient,
         UpdateService updateService,
         GatewayState gatewayState,
+        GatewayLogBuffer logBuffer,
         IOptions<GatewayOptions> options,
         ILogger<TunnelWebSocketHandler> logger,
         ILoggerFactory loggerFactory)
@@ -38,6 +40,7 @@ public class TunnelWebSocketHandler
         _caddyClient = caddyClient;
         _updateService = updateService;
         _gatewayState = gatewayState;
+        _logBuffer = logBuffer;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _options = options.Value;
@@ -180,6 +183,10 @@ public class TunnelWebSocketHandler
                 await HandleUpdateRequestAsync(connection, updateRequest, ct);
                 break;
 
+            case GetLogsRequestMessage getLogsRequest:
+                await HandleGetLogsRequestAsync(connection, getLogsRequest, ct);
+                break;
+
             default:
                 _logger.LogWarning("Unhandled message type: {MessageType}", message.GetType().Name);
                 break;
@@ -266,6 +273,29 @@ public class TunnelWebSocketHandler
                 Reason = "Gateway update queued - restart imminent"
             }, ct);
         }
+    }
+
+    private async Task HandleGetLogsRequestAsync(TunnelConnection connection, GetLogsRequestMessage request, CancellationToken ct)
+    {
+        _logger.LogDebug("Received log request: beforeId={BeforeId}, count={Count}",
+            request.BeforeId, request.Count);
+
+        var (logs, hasMore) = _logBuffer.GetLogs(request.BeforeId, request.Count);
+
+        var response = new GetLogsResponseMessage
+        {
+            RequestId = request.RequestId,
+            Logs = logs.Select(l => new GatewayLogDto
+            {
+                Id = l.Id,
+                Timestamp = l.Timestamp,
+                Level = l.Level,
+                Message = l.Message
+            }).ToArray(),
+            HasMore = hasMore
+        };
+
+        await connection.SendAsync(response, ct);
     }
 }
 

@@ -11,6 +11,7 @@ import type {
   LoginResponse,
   ApiError,
   TriggerUpdateResponse,
+  GetLogsResponse,
 } from '../types'
 
 const API_BASE = '/api/v1'
@@ -115,6 +116,14 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ force }),
     })
+  }
+
+  async getGatewayLogs(beforeId: number = 0, count: number = 1000): Promise<GetLogsResponse> {
+    const params = new URLSearchParams()
+    if (beforeId > 0) params.set('beforeId', beforeId.toString())
+    if (count !== 1000) params.set('count', count.toString())
+    const queryString = params.toString()
+    return this.request<GetLogsResponse>(`/gateway/logs${queryString ? `?${queryString}` : ''}`)
   }
 
   // ─────────────────────────────────────────────────────────────────────────

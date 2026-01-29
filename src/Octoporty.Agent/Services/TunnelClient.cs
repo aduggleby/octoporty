@@ -32,6 +32,7 @@ public class TunnelClient : BackgroundService
     private Task? _heartbeatTask;
     private TaskCompletionSource<ConfigAckMessage>? _pendingConfigAck;
     private TaskCompletionSource<UpdateResponseMessage>? _pendingUpdateResponse;
+    private TaskCompletionSource<GetLogsResponseMessage>? _pendingLogsResponse;
 
     private const string AgentVersion = "1.0.0";
     private const int HeartbeatIntervalSeconds = 30;
@@ -470,6 +471,11 @@ public class TunnelClient : BackgroundService
                 await HandleGatewayLogAsync(gatewayLog);
                 break;
 
+            case GetLogsResponseMessage logsResponse:
+                _logger.LogDebug("GetLogsResponse received: {Count} logs", logsResponse.Logs.Length);
+                _pendingLogsResponse?.TrySetResult(logsResponse);
+                break;
+
             case DisconnectMessage disconnect:
                 _logger.LogWarning("Gateway requested disconnect: {Reason}", disconnect.Reason);
                 await _connectionCts!.CancelAsync();
@@ -627,6 +633,54 @@ public class TunnelClient : BackgroundService
         finally
         {
             _pendingUpdateResponse = null;
+        }
+    }
+
+    /// <summary>
+    /// Requests historical logs from the Gateway.
+    /// </summary>
+    /// <param name="beforeId">Return logs with ID less than this value. Use 0 for latest.</param>
+    /// <param name="count">Maximum number of logs to return.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The logs response from the Gateway.</returns>
+    public async Task<GetLogsResponseMessage> GetGatewayLogsAsync(long beforeId, int count, CancellationToken ct = default)
+    {
+        if (State != TunnelClientState.Connected)
+        {
+            throw new InvalidOperationException("Cannot request logs - not connected to Gateway");
+        }
+
+        _logger.LogDebug("Requesting Gateway logs: beforeId={BeforeId}, count={Count}", beforeId, count);
+
+        // Set up the pending response before sending
+        _pendingLogsResponse = new TaskCompletionSource<GetLogsResponseMessage>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var request = new GetLogsRequestMessage
+        {
+            RequestId = Guid.NewGuid().ToString("N")[..8],
+            BeforeId = beforeId,
+            Count = count
+        };
+
+        // Send through the outbound channel
+        await _outboundChannel.Writer.WriteAsync(request, ct);
+
+        // Wait for response with timeout
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+
+        try
+        {
+            return await _pendingLogsResponse.Task.WaitAsync(linkedCts.Token);
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+        {
+            throw new TimeoutException("Timeout waiting for logs response from Gateway");
+        }
+        finally
+        {
+            _pendingLogsResponse = null;
         }
     }
 

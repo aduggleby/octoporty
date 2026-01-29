@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // GATEWAY PAGE
 // Shows Gateway information and real-time log output
+// Loads historical logs on mount and supports infinite scroll for older logs
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -8,15 +9,27 @@ import { motion } from 'motion/react'
 import { useToast } from '../hooks/useToast'
 import { useSignalR } from '../hooks/useSignalR'
 import { api } from '../api/client'
-import type { AgentStatus, GatewayLog } from '../types'
+import type { AgentStatus, GatewayLog, GatewayLogItem } from '../types'
+
+// Extended log type that includes the ID for pagination
+interface LogEntry {
+  id: number
+  timestamp: string
+  level: GatewayLog['level']
+  message: string
+}
 
 export function GatewayPage() {
   const { addToast } = useToast()
   const [status, setStatus] = useState<AgentStatus | null>(null)
-  const [logs, setLogs] = useState<GatewayLog[]>([])
+  const [logs, setLogs] = useState<LogEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
   const [autoScroll, setAutoScroll] = useState(true)
   const logsEndRef = useRef<HTMLDivElement>(null)
+  const logsContainerRef = useRef<HTMLDivElement>(null)
+  const nextRealTimeId = useRef(Number.MAX_SAFE_INTEGER) // Real-time logs get high IDs
 
   // Fetch initial status
   useEffect(() => {
@@ -30,13 +43,41 @@ export function GatewayPage() {
       })
   }, [addToast])
 
-  // Handle SignalR gateway log updates
+  // Fetch initial logs on mount
+  useEffect(() => {
+    api.getGatewayLogs(0, 1000)
+      .then((response) => {
+        if (response.success) {
+          // Logs come newest-first, reverse for display (oldest at top)
+          const entries: LogEntry[] = response.logs.map((l: GatewayLogItem) => ({
+            id: l.id,
+            timestamp: l.timestamp,
+            level: l.level,
+            message: l.message,
+          })).reverse()
+          setLogs(entries)
+          setHasMore(response.hasMore)
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load initial logs:', err)
+      })
+  }, [])
+
+  // Handle SignalR gateway log updates (real-time)
   const handleGatewayLog = useCallback((log: GatewayLog) => {
     setLogs((prev) => {
-      // Keep only the last 500 logs to avoid memory issues
-      const newLogs = [...prev, log]
-      if (newLogs.length > 500) {
-        return newLogs.slice(-500)
+      // Assign a unique high ID to real-time logs
+      const newLog: LogEntry = {
+        id: nextRealTimeId.current--,
+        timestamp: log.timestamp,
+        level: log.level,
+        message: log.message,
+      }
+      // Keep only the last 2000 logs to avoid memory issues
+      const newLogs = [...prev, newLog]
+      if (newLogs.length > 2000) {
+        return newLogs.slice(-2000)
       }
       return newLogs
     })
@@ -52,6 +93,51 @@ export function GatewayPage() {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [logs, autoScroll])
+
+  // Load more logs when scrolling to top
+  const loadMoreLogs = useCallback(async () => {
+    if (isLoadingMore || !hasMore || logs.length === 0) return
+
+    // Find the oldest log (lowest ID) from historical logs
+    const oldestId = Math.min(...logs.filter(l => l.id < Number.MAX_SAFE_INTEGER - 100000).map(l => l.id))
+    if (oldestId <= 0 || oldestId === Infinity) return
+
+    setIsLoadingMore(true)
+    try {
+      const response = await api.getGatewayLogs(oldestId, 1000)
+      if (response.success && response.logs.length > 0) {
+        const entries: LogEntry[] = response.logs.map((l: GatewayLogItem) => ({
+          id: l.id,
+          timestamp: l.timestamp,
+          level: l.level,
+          message: l.message,
+        })).reverse()
+        setLogs(prev => [...entries, ...prev])
+        setHasMore(response.hasMore)
+      } else {
+        setHasMore(false)
+      }
+    } catch (err) {
+      console.error('Failed to load more logs:', err)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [isLoadingMore, hasMore, logs])
+
+  // Handle scroll to detect when at top
+  const handleScroll = useCallback(() => {
+    const container = logsContainerRef.current
+    if (!container) return
+
+    // Check if scrolled to top (within 50px)
+    if (container.scrollTop < 50 && hasMore && !isLoadingMore) {
+      loadMoreLogs()
+    }
+
+    // Check if scrolled to bottom for auto-scroll
+    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50
+    setAutoScroll(isAtBottom)
+  }, [hasMore, isLoadingMore, loadMoreLogs])
 
   const formatTimestamp = (timestamp: string): string => {
     return new Date(timestamp).toLocaleTimeString('en-US', {
@@ -204,8 +290,34 @@ export function GatewayPage() {
           </div>
         </div>
         <div className="panel-body p-0">
-          <div className="terminal max-h-[500px] overflow-y-auto rounded-none border-0">
-            {logs.length === 0 ? (
+          <div
+            ref={logsContainerRef}
+            onScroll={handleScroll}
+            className="terminal max-h-[500px] overflow-y-auto rounded-none border-0"
+          >
+            {/* Loading more indicator */}
+            {isLoadingMore && (
+              <div className="flex items-center justify-center py-2 text-text-muted">
+                <motion.div
+                  className="w-4 h-4 border-2 border-cyan-base border-t-transparent rounded-full mr-2"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                />
+                <span className="font-mono text-xs">Loading more logs...</span>
+              </div>
+            )}
+            {/* Has more indicator */}
+            {hasMore && !isLoadingMore && logs.length > 0 && (
+              <div className="text-center py-2">
+                <button
+                  onClick={loadMoreLogs}
+                  className="font-mono text-xs text-cyan-base hover:text-cyan-light transition-colors"
+                >
+                  ↑ Load more logs
+                </button>
+              </div>
+            )}
+            {logs.length === 0 && !isLoadingMore && (
               <div className="text-center py-12 text-text-muted">
                 <svg
                   className="w-12 h-12 mx-auto mb-4 opacity-50"
@@ -222,7 +334,8 @@ export function GatewayPage() {
                   Logs will appear here when the gateway is connected
                 </p>
               </div>
-            ) : (
+            )}
+            {logs.length > 0 && (
               <div className="space-y-0.5">
                 {logs.map((log, index) => (
                   <div

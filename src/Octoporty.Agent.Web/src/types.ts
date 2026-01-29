@@ -90,6 +90,21 @@ export interface GatewayLog {
   message: string
 }
 
+// Gateway Logs API types
+export interface GetLogsResponse {
+  success: boolean
+  error?: string
+  logs: GatewayLogItem[]
+  hasMore: boolean
+}
+
+export interface GatewayLogItem {
+  id: number
+  timestamp: string
+  level: LogLevel
+  message: string
+}
+
 // Toast/Notification types
 export type ToastType = 'success' | 'error' | 'warning' | 'info'
 
