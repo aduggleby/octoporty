@@ -473,6 +473,24 @@ Content-Type: application/json
 3. Ensure JWT secret is configured
 4. Clear browser cookies and try again
 
+### Data directory permission errors
+
+If the Agent fails to start with a message about the data directory not being writable, the container cannot write to the mounted volume.
+
+**For Docker Compose with bind mounts:**
+```bash
+# The container runs as UID 1654 (.NET chiseled image default)
+sudo chown -R 1654:1654 /path/to/your/data
+```
+
+**For TrueNAS SCALE:**
+1. In the app configuration, go to Storage
+2. Set the Host Path's "User ID" to `1654`
+3. Or use the "Apps" preset which grants appropriate permissions
+
+**For other NAS platforms:**
+Set the data directory ownership to UID 1654, which is the non-root user ID used by .NET chiseled container images.
+
 ### Startup Banner
 
 When the Gateway or Agent starts, it displays a startup banner with the current configuration. This helps verify that environment variables are loaded correctly. Sensitive values (API keys, passwords, secrets) are obfuscated, showing only the first 2 and last 2 characters.

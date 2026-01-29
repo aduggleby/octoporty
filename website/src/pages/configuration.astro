@@ -242,6 +242,16 @@ ConnectionStrings__DefaultConnection=Data Source=/custom/path/octoporty.db`;
       No configuration needed. Data is stored in <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">/app/data/octoporty.db</code> inside the container. Mount a volume to <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">/app/data</code> to persist data across container restarts.
     </p>
 
+    <h3 class="mb-2 text-lg font-semibold text-zinc-800 dark:text-zinc-200">Container Permissions</h3>
+    <p class="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+      The Agent container runs as UID <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">1654</code> (the default non-root user in .NET chiseled images). When using bind mounts, ensure the host directory is writable by this user:
+    </p>
+    <ul class="mb-4 list-disc list-inside text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
+      <li><strong>Docker Compose:</strong> Run <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">sudo chown -R 1654:1654 /path/to/data</code> on the host</li>
+      <li><strong>TrueNAS SCALE:</strong> Set Host Path "User ID" to <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">1654</code> in Storage config, or use the "Apps" preset</li>
+      <li><strong>Other NAS platforms:</strong> Set directory ownership to UID 1654</li>
+    </ul>
+
     <h3 class="mb-2 text-lg font-semibold text-zinc-800 dark:text-zinc-200">Custom Path</h3>
     <CodeBlock code={customDbPath} lang="bash" filename=".env" />
   </section>

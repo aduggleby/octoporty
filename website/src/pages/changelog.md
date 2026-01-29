@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.28
+
+**2026-01-29**
+
+- **Data Directory Validation** - The Agent now validates data directory permissions at startup with clear, actionable error messages. Includes platform-specific guidance for Docker bind mounts, TrueNAS SCALE, and other NAS platforms. The container runs as UID 1654.
+
+---
+
 ## 0.9.27
 
 **2026-01-29**
