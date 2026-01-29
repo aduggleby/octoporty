@@ -30,6 +30,15 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.39
+
+**2026-01-29**
+
+- Update branding colors from red to blue
+- Refresh screenshots throughout the application
+
+---
+
 ## 0.9.38
 
 **2026-01-29**
