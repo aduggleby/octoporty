@@ -74,6 +74,16 @@ const statusConfig: Record<
     ledClass: 'led-connecting',
     description: 'Establishing tunnel...',
   },
+  Authenticating: {
+    label: 'AUTHENTICATING',
+    ledClass: 'led-connecting',
+    description: 'Verifying credentials...',
+  },
+  Syncing: {
+    label: 'SYNCING',
+    ledClass: 'led-connecting',
+    description: 'Syncing configuration...',
+  },
   Reconnecting: {
     label: 'RECONNECTING',
     ledClass: 'led-connecting',
@@ -129,7 +139,7 @@ export function ConnectionStatus({
               'badge',
               status === 'Connected' && 'badge-success',
               status === 'Disconnected' && 'badge-error',
-              (status === 'Connecting' || status === 'Reconnecting') &&
+              (status === 'Connecting' || status === 'Authenticating' || status === 'Syncing' || status === 'Reconnecting') &&
                 'badge-warning'
             )}
           >
@@ -210,7 +220,7 @@ export function ConnectionStatusBadge({
         'inline-flex items-center gap-2 px-3 py-1.5 rounded-md',
         status === 'Connected' && 'bg-emerald-glow',
         status === 'Disconnected' && 'bg-rose-glow',
-        (status === 'Connecting' || status === 'Reconnecting') && 'bg-amber-glow'
+        (status === 'Connecting' || status === 'Authenticating' || status === 'Syncing' || status === 'Reconnecting') && 'bg-amber-glow'
       )}
     >
       <div className={clsx('led w-2 h-2', config.ledClass)} />

@@ -31,7 +31,7 @@ export interface UpdateMappingRequest extends CreateMappingRequest {
   id: string
 }
 
-export type ConnectionStatus = 'Connected' | 'Disconnected' | 'Connecting' | 'Reconnecting'
+export type ConnectionStatus = 'Connected' | 'Disconnected' | 'Connecting' | 'Authenticating' | 'Syncing' | 'Reconnecting'
 
 export interface AgentStatus {
   connectionStatus: ConnectionStatus
