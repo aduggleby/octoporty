@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.37
+
+**2026-01-29**
+
+- Simplify login page button text
+
+---
+
 ## 0.9.36
 
 **2026-01-29**
