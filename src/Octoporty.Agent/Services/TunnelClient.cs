@@ -466,6 +466,10 @@ public class TunnelClient : BackgroundService
                 _pendingUpdateResponse?.TrySetResult(updateResponse);
                 break;
 
+            case GatewayLogMessage gatewayLog:
+                await HandleGatewayLogAsync(gatewayLog);
+                break;
+
             case DisconnectMessage disconnect:
                 _logger.LogWarning("Gateway requested disconnect: {Reason}", disconnect.Reason);
                 await _connectionCts!.CancelAsync();
@@ -505,6 +509,17 @@ public class TunnelClient : BackgroundService
                 Body = Encoding.UTF8.GetBytes($"Bad Gateway: {ex.Message}")
             }, ct);
         }
+    }
+
+    private async Task HandleGatewayLogAsync(GatewayLogMessage log)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var notifier = scope.ServiceProvider.GetRequiredService<StatusNotifier>();
+
+        await notifier.NotifyGatewayLogAsync(
+            log.Timestamp,
+            log.Level.ToString(),
+            log.Message);
     }
 
     private async Task SendMessageAsync(TunnelMessage message, CancellationToken ct)

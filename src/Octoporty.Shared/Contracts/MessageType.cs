@@ -19,5 +19,6 @@ public enum MessageType : byte
     Disconnect = 11,
     UpdateRequest = 12,
     UpdateResponse = 13,
+    GatewayLog = 14,
     Error = 255
 }

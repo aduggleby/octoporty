@@ -13,6 +13,7 @@ using Octoporty.Gateway.Services;
 using Octoporty.Shared.Logging;
 using Octoporty.Shared.Options;
 using Octoporty.Shared.Startup;
+using Serilog;
 
 // Use SlimBuilder to avoid default config file loading with reloadOnChange: true
 // which fails in read-only containers (chiseled images)
@@ -44,6 +45,20 @@ builder.Services.AddTransient<TunnelWebSocketHandler>();
 builder.Services.AddHttpClient<ICaddyAdminClient, CaddyAdminClient>();
 
 var app = builder.Build();
+
+// Add tunnel log sink for forwarding logs to Agent
+// This must be done after app is built so we can access TunnelConnectionManager
+var tunnelConnectionManager = app.Services.GetRequiredService<TunnelConnectionManager>();
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(app.Configuration)
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.Sink(new TunnelLogSink(() => tunnelConnectionManager))
+    .CreateLogger();
 
 // Validate required configuration at startup
 var gatewayOptions = app.Services.GetRequiredService<IOptions<GatewayOptions>>().Value;

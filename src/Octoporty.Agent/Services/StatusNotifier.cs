@@ -41,4 +41,14 @@ public class StatusNotifier
 
         await _hubContext.Clients.All.MappingStatusUpdate(update);
     }
+
+    public async Task NotifyGatewayLogAsync(DateTime timestamp, string level, string message)
+    {
+        var log = new GatewayLogMessageDto(
+            Timestamp: timestamp,
+            Level: level,
+            Message: message);
+
+        await _hubContext.Clients.All.GatewayLog(log);
+    }
 }

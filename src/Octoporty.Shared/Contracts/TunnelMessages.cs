@@ -21,6 +21,7 @@ namespace Octoporty.Shared.Contracts;
 [Union(11, typeof(ResponseBodyChunkMessage))]
 [Union(12, typeof(UpdateRequestMessage))]
 [Union(13, typeof(UpdateResponseMessage))]
+[Union(14, typeof(GatewayLogMessage))]
 public abstract class TunnelMessage
 {
     [IgnoreMember]
@@ -299,4 +300,35 @@ public enum UpdateStatus : byte
 
     /// <summary>An update is already queued and pending.</summary>
     AlreadyQueued = 2
+}
+
+/// <summary>
+/// Log message from the Gateway forwarded to the Agent for UI display.
+/// Allows real-time log streaming from the Gateway to the Agent's web UI.
+/// </summary>
+[MessagePackObject]
+public sealed class GatewayLogMessage : TunnelMessage
+{
+    [IgnoreMember]
+    public override MessageType Type => MessageType.GatewayLog;
+
+    [Key(0)]
+    public required DateTime Timestamp { get; init; }
+
+    [Key(1)]
+    public required GatewayLogLevel Level { get; init; }
+
+    [Key(2)]
+    public required string Message { get; init; }
+}
+
+/// <summary>
+/// Log levels for gateway log messages.
+/// </summary>
+public enum GatewayLogLevel : byte
+{
+    Debug = 0,
+    Info = 1,
+    Warning = 2,
+    Error = 3
 }
