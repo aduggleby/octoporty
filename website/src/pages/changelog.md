@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.26
+
+**2026-01-29**
+
+- **Database Migration to SQLite** - Replaced SQL Server with SQLite for simpler setup and lower resource usage. No external database required. Data is stored in `/app/data/octoporty.db` with automatic volume mounting in Docker deployments. Existing SQL Server installations should migrate data before upgrading.
+
+---
+
 ## 0.9.25
 
 **2026-01-29**

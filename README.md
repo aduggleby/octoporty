@@ -180,7 +180,6 @@ volumes:
 **Prerequisites:**
 - .NET 10 SDK
 - Node.js 20+ (for frontend build)
-- SQL Server (for Agent database)
 
 **Build from source:**
 
@@ -313,7 +312,7 @@ When you update the Agent to a newer version, it can detect that the Gateway is 
 | `Agent__Auth__Username` | Web UI login username | Required |
 | `Agent__Auth__Password` | Web UI login password | Required |
 | `Agent__Port` | Agent web UI port | `17201` |
-| `ConnectionStrings__DefaultConnection` | SQL Server connection string | SQLite default |
+| `ConnectionStrings__DefaultConnection` | Database connection string | SQLite at `/app/data/octoporty.db` |
 
 ### Port Assignments
 
@@ -324,7 +323,6 @@ Octoporty uses port range 17200-17299:
 | 17200 | Gateway |
 | 17201 | Agent Web UI |
 | 17202 | Caddy Admin API |
-| 17203 | SQL Server (dev) |
 | 17280 | Caddy HTTP |
 | 17243 | Caddy HTTPS |
 
@@ -387,7 +385,7 @@ dotnet test --filter "FullyQualifiedName~ComprehensiveUi"
 **Backend:**
 - .NET 10
 - FastEndpoints (API framework)
-- Entity Framework Core (SQL Server)
+- Entity Framework Core (SQLite)
 - SignalR (WebSocket management)
 - MessagePack (binary serialization)
 - Serilog (structured logging)

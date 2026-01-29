@@ -26,7 +26,6 @@ const portAssignments = [
   { port: "17200", service: "Gateway", desc: "WebSocket endpoint for Agent connections" },
   { port: "17201", service: "Agent Web UI", desc: "Management interface for port mappings" },
   { port: "17202", service: "Caddy Admin", desc: "Caddy Admin API (internal)" },
-  { port: "17203", service: "SQL Server", desc: "Database (development only)" },
   { port: "17280", service: "Caddy HTTP", desc: "HTTP ingress (redirects to HTTPS)" },
   { port: "17243", service: "Caddy HTTPS", desc: "HTTPS ingress for tunneled services" },
 ];
@@ -41,8 +40,8 @@ AGENT_JWT_SECRET=your-jwt-secret-at-least-32-characters-long
 AGENT_USERNAME=admin
 AGENT_PASSWORD=your-secure-admin-password
 
-# Optional: SQL Server (for production)
-# CONNECTION_STRING=Server=localhost;Database=Octoporty;User Id=sa;Password=...;`;
+# Optional: Custom database path
+# CONNECTION_STRING=Data Source=/custom/path/octoporty.db`;
 
 const caddyfileExample = `{
     admin :2019
@@ -58,8 +57,8 @@ gateway.yourdomain.com {
     reverse_proxy gateway:17200
 }`;
 
-const sqlServerConfig = `# Using SQL Server instead of SQLite
-ConnectionStrings__DefaultConnection=Server=your-sql-server;Database=Octoporty;User Id=octoporty;Password=your-password;TrustServerCertificate=true`;
+const customDbPath = `# Custom SQLite database path
+ConnectionStrings__DefaultConnection=Data Source=/custom/path/octoporty.db`;
 ---
 
 <BaseLayout
@@ -235,16 +234,16 @@ ConnectionStrings__DefaultConnection=Server=your-sql-server;Database=Octoporty;U
   <section id="database" class="mb-10 md:mb-16">
     <h2 class="mb-2 text-xl font-bold text-zinc-900 sm:text-2xl dark:text-white">Database Configuration</h2>
     <p class="mb-4 text-zinc-500 sm:mb-6 dark:text-zinc-400">
-      By default, the Agent uses SQLite for local storage. For production deployments, SQL Server is recommended.
+      The Agent uses SQLite for lightweight local storage. No external database is required.
     </p>
 
-    <h3 class="mb-2 text-lg font-semibold text-zinc-800 dark:text-zinc-200">SQLite (Default)</h3>
+    <h3 class="mb-2 text-lg font-semibold text-zinc-800 dark:text-zinc-200">Default Location</h3>
     <p class="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-      No configuration needed. Data is stored in <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">/app/data/octoporty.db</code> inside the container.
+      No configuration needed. Data is stored in <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">/app/data/octoporty.db</code> inside the container. Mount a volume to <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">/app/data</code> to persist data across container restarts.
     </p>
 
-    <h3 class="mb-2 text-lg font-semibold text-zinc-800 dark:text-zinc-200">SQL Server</h3>
-    <CodeBlock code={sqlServerConfig} lang="bash" filename=".env" />
+    <h3 class="mb-2 text-lg font-semibold text-zinc-800 dark:text-zinc-200">Custom Path</h3>
+    <CodeBlock code={customDbPath} lang="bash" filename=".env" />
   </section>
 
   <section id="security" class="mb-10 md:mb-16">
