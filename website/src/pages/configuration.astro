@@ -75,13 +75,13 @@ ConnectionStrings__DefaultConnection=Data Source=/custom/path/octoporty.db`;
   <nav class="mb-8 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/50">
     <h2 class="mb-2 text-sm font-semibold tracking-wider text-zinc-400 uppercase">On this page</h2>
     <ul class="space-y-1 text-sm">
-      <li><a href="#gateway" class="text-red-600 hover:underline dark:text-red-400">Gateway Configuration</a></li>
-      <li><a href="#agent" class="text-red-600 hover:underline dark:text-red-400">Agent Configuration</a></li>
-      <li><a href="#ports" class="text-red-600 hover:underline dark:text-red-400">Port Assignments</a></li>
-      <li><a href="#env-file" class="text-red-600 hover:underline dark:text-red-400">Environment File Example</a></li>
-      <li><a href="#caddy" class="text-red-600 hover:underline dark:text-red-400">Caddy Configuration</a></li>
-      <li><a href="#database" class="text-red-600 hover:underline dark:text-red-400">Database Configuration</a></li>
-      <li><a href="#security" class="text-red-600 hover:underline dark:text-red-400">Security Best Practices</a></li>
+      <li><a href="#gateway" class="text-blue-600 hover:underline dark:text-blue-400">Gateway Configuration</a></li>
+      <li><a href="#agent" class="text-blue-600 hover:underline dark:text-blue-400">Agent Configuration</a></li>
+      <li><a href="#ports" class="text-blue-600 hover:underline dark:text-blue-400">Port Assignments</a></li>
+      <li><a href="#env-file" class="text-blue-600 hover:underline dark:text-blue-400">Environment File Example</a></li>
+      <li><a href="#caddy" class="text-blue-600 hover:underline dark:text-blue-400">Caddy Configuration</a></li>
+      <li><a href="#database" class="text-blue-600 hover:underline dark:text-blue-400">Database Configuration</a></li>
+      <li><a href="#security" class="text-blue-600 hover:underline dark:text-blue-400">Security Best Practices</a></li>
     </ul>
   </nav>
 
@@ -106,13 +106,13 @@ ConnectionStrings__DefaultConnection=Data Source=/custom/path/octoporty.db`;
             gatewayConfig.map((item) => (
               <tr class="border-b border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/50">
                 <td class="px-3 py-3">
-                  <code class="rounded bg-zinc-100 px-1.5 py-0.5 text-red-600 dark:bg-zinc-800 dark:text-red-400">
+                  <code class="rounded bg-zinc-100 px-1.5 py-0.5 text-blue-600 dark:bg-zinc-800 dark:text-blue-400">
                     {item.name}
                   </code>
                 </td>
                 <td class="px-3 py-3">
                   {item.required ? (
-                    <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">Yes</span>
+                    <span class="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Yes</span>
                   ) : (
                     <span class="rounded bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">No</span>
                   )}
@@ -150,13 +150,13 @@ ConnectionStrings__DefaultConnection=Data Source=/custom/path/octoporty.db`;
             agentConfig.map((item) => (
               <tr class="border-b border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/50">
                 <td class="px-3 py-3">
-                  <code class="rounded bg-zinc-100 px-1.5 py-0.5 text-red-600 dark:bg-zinc-800 dark:text-red-400">
+                  <code class="rounded bg-zinc-100 px-1.5 py-0.5 text-blue-600 dark:bg-zinc-800 dark:text-blue-400">
                     {item.name}
                   </code>
                 </td>
                 <td class="px-3 py-3">
                   {item.required ? (
-                    <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">Yes</span>
+                    <span class="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Yes</span>
                   ) : (
                     <span class="rounded bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">No</span>
                   )}
@@ -193,7 +193,7 @@ ConnectionStrings__DefaultConnection=Data Source=/custom/path/octoporty.db`;
             portAssignments.map((item) => (
               <tr class="border-b border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/50">
                 <td class="px-3 py-3">
-                  <code class="rounded bg-zinc-100 px-1.5 py-0.5 text-red-600 dark:bg-zinc-800 dark:text-red-400">
+                  <code class="rounded bg-zinc-100 px-1.5 py-0.5 text-blue-600 dark:bg-zinc-800 dark:text-blue-400">
                     {item.port}
                   </code>
                 </td>

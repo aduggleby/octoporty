@@ -6,10 +6,10 @@
 
 **Self-hosted reverse proxy tunneling solution**
 
-[![Website](https://img.shields.io/badge/Website-octoporty.com-dc2626)](https://octoporty.com)
+[![Website](https://img.shields.io/badge/Website-octoporty.com-3b82f6)](https://octoporty.com)
 [![GitHub](https://img.shields.io/badge/GitHub-aduggleby%2Foctoporty-black?logo=github)](https://github.com/aduggleby/octoporty)
-[![License](https://img.shields.io/badge/License-No'Saasy-dc2626)](LICENSE)
-[![.NET](https://img.shields.io/badge/.NET-10-dc2626)](https://dotnet.microsoft.com)
+[![License](https://img.shields.io/badge/License-No'Saasy-3b82f6)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-10-3b82f6)](https://dotnet.microsoft.com)
 
 Octoporty is a self-hosted alternative to ngrok that lets you expose internal services through a public endpoint. Deploy the Gateway on a cloud server with a public IP, run the Agent inside your private network, and securely tunnel traffic to your internal services.
 
@@ -328,23 +328,18 @@ The Agent includes an embedded React web application for managing port mappings.
 ### Screenshots
 
 <p align="center">
-  <img src="website/public/screenshots/login.png" alt="Login Screen" width="400"/>
+  <img src="screenshots/login.png" alt="Login Screen" width="400"/>
   <br><em>Login Screen</em>
 </p>
 
 <p align="center">
-  <img src="website/public/screenshots/dashboard.png" alt="Dashboard" width="600"/>
-  <br><em>Dashboard - Overview of tunnel status</em>
+  <img src="screenshots/dashboard.png" alt="Dashboard" width="600"/>
+  <br><em>Dashboard - Overview of tunnel status and gateway information</em>
 </p>
 
 <p align="center">
-  <img src="website/public/screenshots/mappings-list.png" alt="Mappings List" width="600"/>
-  <br><em>Mappings List - View and manage port mappings</em>
-</p>
-
-<p align="center">
-  <img src="website/public/screenshots/mapping-form.png" alt="Create Mapping" width="600"/>
-  <br><em>Create Mapping - Configure a new tunnel endpoint</em>
+  <img src="screenshots/mappings.png" alt="Mappings" width="600"/>
+  <br><em>Mappings - View and manage port mappings</em>
 </p>
 
 ### Features
