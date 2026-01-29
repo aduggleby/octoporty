@@ -208,8 +208,19 @@ View logs in TrueNAS UI:
 
 ### Permission errors
 
-If the app can't write to storage:
+If the app can't write to storage, you need to ensure the container runs as a user that has write access to the data directory.
+
+**Option 1: Set Security Context (Recommended)**
+
+In the TrueNAS app configuration:
+1. Go to **Resources and Devices** > **Security Context**
+2. Set **User ID** to `568` (the TrueNAS apps user)
+3. Ensure your dataset is owned by the apps user
+
+**Option 2: Fix directory ownership**
 
 ```bash
 chown -R apps:apps /mnt/pool/octoporty
 ```
+
+Note: The `/app/data` directory is created at runtime and inherits the container's UID, so the simplest solution is to run the container as a user that already has write access to the mounted volume.

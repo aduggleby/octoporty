@@ -244,12 +244,12 @@ ConnectionStrings__DefaultConnection=Data Source=/custom/path/octoporty.db`;
 
     <h3 class="mb-2 text-lg font-semibold text-zinc-800 dark:text-zinc-200">Container Permissions</h3>
     <p class="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-      The Agent container runs as UID <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">1654</code> (the default non-root user in .NET chiseled images). When using bind mounts, ensure the host directory is writable by this user:
+      The <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">/app/data</code> directory is created at runtime and inherits the container's UID. Ensure the container runs as a user with write access to the mounted volume:
     </p>
     <ul class="mb-4 list-disc list-inside text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
-      <li><strong>Docker Compose:</strong> Run <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">sudo chown -R 1654:1654 /path/to/data</code> on the host</li>
-      <li><strong>TrueNAS SCALE:</strong> Set Host Path "User ID" to <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">1654</code> in Storage config, or use the "Apps" preset</li>
-      <li><strong>Other NAS platforms:</strong> Set directory ownership to UID 1654</li>
+      <li><strong>Docker Compose:</strong> Add <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">user: "1000:1000"</code> to match your host user, or run <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">sudo chown -R 1000:1000 /path/to/data</code></li>
+      <li><strong>TrueNAS SCALE:</strong> Set Security Context User ID to <code class="rounded bg-zinc-100 px-1 dark:bg-zinc-800">568</code> (the apps user) and ensure your dataset is owned by apps (568:568)</li>
+      <li><strong>Other NAS platforms:</strong> Run the container as a user with write access to the data directory</li>
     </ul>
 
     <h3 class="mb-2 text-lg font-semibold text-zinc-800 dark:text-zinc-200">Custom Path</h3>

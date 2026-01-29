@@ -475,21 +475,24 @@ Content-Type: application/json
 
 ### Data directory permission errors
 
-If the Agent fails to start with a message about the data directory not being writable, the container cannot write to the mounted volume.
+If the Agent fails to start with a message about the data directory not being writable, the container cannot write to the mounted volume. The `/app/data` directory is created at runtime and inherits the container's UID.
 
 **For Docker Compose with bind mounts:**
 ```bash
-# The container runs as UID 1654 (.NET chiseled image default)
-sudo chown -R 1654:1654 /path/to/your/data
+# Option 1: Run container as your host user (recommended)
+# Add to docker-compose.yml: user: "1000:1000"
+
+# Option 2: Change ownership to match your host user
+sudo chown -R 1000:1000 /path/to/your/data
 ```
 
 **For TrueNAS SCALE:**
-1. In the app configuration, go to Storage
-2. Set the Host Path's "User ID" to `1654`
-3. Or use the "Apps" preset which grants appropriate permissions
+1. In the app configuration, go to **Resources and Devices** > **Security Context**
+2. Set **User ID** to `568` (the TrueNAS apps user)
+3. Ensure your dataset is owned by the apps user (568:568)
 
 **For other NAS platforms:**
-Set the data directory ownership to UID 1654, which is the non-root user ID used by .NET chiseled container images.
+Set the container to run as a user that has write access to the data directory, or change the directory ownership to match the container's runtime UID.
 
 ### Startup Banner
 

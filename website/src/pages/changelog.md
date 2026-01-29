@@ -30,11 +30,21 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.29
+
+**2026-01-29**
+
+- **Improved Permission Handling** - The `/app/data` directory is no longer pre-created in the Docker image. It's now created at runtime, inheriting the container's UID. Error messages now provide clearer platform-specific guidance:
+  - TrueNAS SCALE: Set Security Context User ID to 568 (apps user)
+  - Docker Compose: Use `user: "1000:1000"` or `chown` the bind mount
+
+---
+
 ## 0.9.28
 
 **2026-01-29**
 
-- **Data Directory Validation** - The Agent now validates data directory permissions at startup with clear, actionable error messages. Includes platform-specific guidance for Docker bind mounts, TrueNAS SCALE, and other NAS platforms. The container runs as UID 1654.
+- **Data Directory Validation** - The Agent now validates data directory permissions at startup with clear, actionable error messages. Includes platform-specific guidance for Docker bind mounts, TrueNAS SCALE, and other NAS platforms.
 
 ---
 

@@ -119,10 +119,9 @@ if (!string.IsNullOrEmpty(dbPath))
         {
             throw new InvalidOperationException(
                 $"Data directory '{dataDir}' is not writable. " +
-                $"For TrueNAS SCALE: Set 'User ID' to 568 in Security Context to run as the apps user, " +
-                $"and ensure your dataset is owned by the apps user (568:568). " +
-                $"For Docker Compose: Either set 'user: \"1000:1000\"' to match your host user, " +
-                $"or run 'sudo chown -R 1000:1000 /path/to/data' on the bind mount. " +
+                $"Ensure the mounted volume/dataset is writable by the container's user. " +
+                $"For TrueNAS SCALE: Ensure your dataset is owned by the apps user (568:568). " +
+                $"For Docker Compose with bind mounts: Run 'sudo chown -R $(id -u):$(id -g) /path/to/data'. " +
                 $"Error: {ex.Message}");
         }
     }
