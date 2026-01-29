@@ -131,4 +131,5 @@ infrastructure/secrets/
 # Claude Code
 .claude/settings.local.json
 .env.ando
-.ando/
+.ando/.keys/
+.keys/

@@ -30,6 +30,16 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.34
+
+**2026-01-29**
+
+- Display gateway uptime in the dashboard
+- Simplify port mapping by removing external port configuration
+- Fix SignalR infinite reconnection loop in web UI
+
+---
+
 ## 0.9.33
 
 **2026-01-29**

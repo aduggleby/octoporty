@@ -13,9 +13,24 @@ This document captures testing procedures and learnings for testing Octoporty on
 - test.octoporty.com → 91.99.233.13
 - agent.octoporty.com → 46.224.221.66
 
+## SSH Access
+
+SSH keys stored in `.keys/` directory (gitignored):
+- **Private key**: `.keys/octoporty_deploy`
+- **Public key**: `.keys/octoporty_deploy.pub`
+- **Hcloud key name**: `octoporty-deploy`
+
+```bash
+# SSH to Gateway
+ssh -i .keys/octoporty_deploy root@91.99.233.13
+
+# SSH to Agent
+ssh -i .keys/octoporty_deploy root@46.224.221.66
+```
+
 ## Credentials
 
-Stored in scratchpad during testing session:
+Stored in Agent's .env file on the server:
 - **Gateway API Key**: gyGT3B9frIb3PhkMjDNQq1n6q9MiUn9h
 - **Agent Web UI**: admin / UosCIZyCIqtRJInv
 - **JWT Secret**: 12vNA9FiBQkuFcij0tWZnJ607oyXJ9KS
