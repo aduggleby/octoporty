@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.31
+
+**2026-01-29**
+
+- Improve reliability of container user ID detection in startup banner
+
+---
+
 ## 0.9.30
 
 **2026-01-29**
