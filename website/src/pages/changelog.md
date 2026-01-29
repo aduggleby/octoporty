@@ -30,6 +30,17 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.36
+
+**2026-01-29**
+
+- Add logo branding across the application
+- **Gateway Logs** - View real-time Gateway logs in the Agent web UI. Logs are streamed via the tunnel and include historical retrieval with infinite scroll (up to 10,000 entries)
+- Improve mappings page responsiveness and layout
+- Fix connection status display for all states (Authenticating, Syncing)
+
+---
+
 ## 0.9.35
 
 **2026-01-29**

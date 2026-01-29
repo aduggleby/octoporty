@@ -351,6 +351,7 @@ The Agent includes an embedded React web application for managing port mappings.
 
 - **Dashboard** - Overview of tunnel status and active mappings
 - **Port Mappings** - Create, edit, and delete domain-to-service mappings
+- **Gateway Logs** - Real-time streaming of Gateway logs with historical log retrieval and infinite scroll
 - **Connection Logs** - View connection history and status
 - **Request Logs** - Audit trail of all tunneled requests
 
