@@ -58,18 +58,28 @@ if (string.IsNullOrWhiteSpace(agentOptions.Auth.Password))
 // Get current UID/GID for debugging container user issues
 var uid = "unknown";
 var gid = "unknown";
-if (OperatingSystem.IsLinux())
+try
 {
-    try
+    if (File.Exists("/proc/self/status"))
     {
-        // Read UID/GID from /proc/self/status
-        var status = File.ReadAllText("/proc/self/status");
-        var uidLine = status.Split('\n').FirstOrDefault(l => l.StartsWith("Uid:"));
-        var gidLine = status.Split('\n').FirstOrDefault(l => l.StartsWith("Gid:"));
-        if (uidLine != null) uid = uidLine.Split('\t')[1]; // Real UID
-        if (gidLine != null) gid = gidLine.Split('\t')[1]; // Real GID
+        foreach (var line in File.ReadLines("/proc/self/status"))
+        {
+            if (line.StartsWith("Uid:"))
+            {
+                var parts = line.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length > 1) uid = parts[1];
+            }
+            else if (line.StartsWith("Gid:"))
+            {
+                var parts = line.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length > 1) gid = parts[1];
+            }
+        }
     }
-    catch { /* Ignore errors reading proc */ }
+}
+catch
+{
+    // Ignore errors - UID/GID will remain "unknown"
 }
 
 // Display startup banner with configuration
