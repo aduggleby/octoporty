@@ -23,4 +23,11 @@ public class GatewayOptions
     /// Disable this if you want to manage updates manually.
     /// </summary>
     public bool AllowRemoteUpdate { get; set; } = true;
+
+    /// <summary>
+    /// The Gateway's own FQDN for serving the landing page.
+    /// When a request arrives for this domain at the root path, the landing page is served.
+    /// Example: gateway.octoporty.com
+    /// </summary>
+    public string GatewayFqdn { get; set; } = "";
 }

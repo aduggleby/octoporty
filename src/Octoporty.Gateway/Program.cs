@@ -74,10 +74,35 @@ StartupBanner.Print("Gateway", new Dictionary<string, string?>
 {
     ["ApiKey"] = gatewayOptions.ApiKey,
     ["CaddyAdminUrl"] = gatewayOptions.CaddyAdminUrl,
+    ["GatewayFqdn"] = gatewayOptions.GatewayFqdn,
     ["Environment"] = app.Environment.EnvironmentName
 });
 
 app.UseWebSockets();
+
+// Landing page middleware - serve the landing page when accessing the Gateway's own FQDN.
+// This runs BEFORE request routing so tunnel requests don't hit this path.
+app.Use(async (context, next) =>
+{
+    var options = context.RequestServices.GetRequiredService<IOptions<GatewayOptions>>().Value;
+    var state = context.RequestServices.GetRequiredService<GatewayState>();
+
+    // Only serve landing page if:
+    // 1. GatewayFqdn is configured
+    // 2. Request host matches the Gateway's FQDN
+    // 3. Request path is the root "/"
+    if (!string.IsNullOrEmpty(options.GatewayFqdn) &&
+        context.Request.Host.Host.Equals(options.GatewayFqdn, StringComparison.OrdinalIgnoreCase) &&
+        context.Request.Path == "/")
+    {
+        context.Response.ContentType = "text/html; charset=utf-8";
+        await context.Response.WriteAsync(state.LandingPageHtml);
+        return;
+    }
+
+    await next();
+});
+
 app.UseRequestRouting();
 
 // Health endpoint - minimal info for unauthenticated access

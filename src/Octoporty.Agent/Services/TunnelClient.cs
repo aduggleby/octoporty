@@ -22,8 +22,13 @@ public class TunnelClient : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<TunnelClient> _logger;
     private readonly AgentOptions _options;
+    private readonly LandingPageService _landingPageService;
     private readonly ReconnectionPolicy _reconnectionPolicy = new();
     private Channel<TunnelMessage> _outboundChannel;
+
+    // Gateway's landing page hash, received during authentication.
+    // Used to determine if landing page HTML should be sent in config sync.
+    private string? _gatewayLandingPageHash;
 
     private ClientWebSocket? _webSocket;
     private CancellationTokenSource? _connectionCts;
@@ -60,11 +65,13 @@ public class TunnelClient : BackgroundService
     public TunnelClient(
         IServiceProvider serviceProvider,
         IOptions<AgentOptions> options,
+        LandingPageService landingPageService,
         ILogger<TunnelClient> logger)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
         _options = options.Value;
+        _landingPageService = landingPageService;
         _outboundChannel = CreateOutboundChannel();
     }
 
@@ -190,6 +197,7 @@ public class TunnelClient : BackgroundService
             if (authResult.Success)
             {
                 GatewayVersion = authResult.GatewayVersion;
+                _gatewayLandingPageHash = authResult.LandingPageHtmlHash;
                 _logger.LogInformation("Authenticated successfully (Gateway v{Version})", GatewayVersion);
 
                 // Compare versions to determine if Gateway update is available
@@ -235,10 +243,23 @@ public class TunnelClient : BackgroundService
 
         var configHash = ComputeConfigHash(mappings);
 
+        // Get landing page and determine if it needs syncing
+        var (landingPageHtml, landingPageHash) = await _landingPageService.GetLandingPageAsync();
+        var needsLandingPageSync = _gatewayLandingPageHash != landingPageHash;
+
+        if (needsLandingPageSync)
+        {
+            _logger.LogInformation("Landing page hash differs (Agent: {AgentHash}, Gateway: {GatewayHash}), syncing HTML",
+                landingPageHash[..8], _gatewayLandingPageHash?[..8] ?? "none");
+        }
+
         var syncMessage = new ConfigSyncMessage
         {
             Mappings = mappings,
-            ConfigHash = configHash
+            ConfigHash = configHash,
+            // Only include HTML if hashes differ to save bandwidth
+            LandingPageHtml = needsLandingPageSync ? landingPageHtml : null,
+            LandingPageHtmlHash = landingPageHash
         };
 
         _logger.LogDebug("Sending ConfigSyncMessage with {Count} mappings, hash {Hash}",
@@ -322,10 +343,21 @@ public class TunnelClient : BackgroundService
 
         var configHash = ComputeConfigHash(mappings);
 
+        // Get landing page and determine if it needs syncing
+        var (landingPageHtml, landingPageHash) = await _landingPageService.GetLandingPageAsync();
+        var needsLandingPageSync = _gatewayLandingPageHash != landingPageHash;
+
+        if (needsLandingPageSync)
+        {
+            _logger.LogInformation("Landing page hash differs during resync, including HTML");
+        }
+
         var syncMessage = new ConfigSyncMessage
         {
             Mappings = mappings,
-            ConfigHash = configHash
+            ConfigHash = configHash,
+            LandingPageHtml = needsLandingPageSync ? landingPageHtml : null,
+            LandingPageHtmlHash = landingPageHash
         };
 
         _logger.LogDebug("Resyncing configuration with {Count} mappings, hash {Hash}",
@@ -458,6 +490,13 @@ public class TunnelClient : BackgroundService
 
             case ConfigAckMessage configAck:
                 _logger.LogDebug("ConfigAck received: Success={Success}", configAck.Success);
+                // Update our cached Gateway landing page hash after successful sync.
+                // This ensures we don't resend the landing page HTML unnecessarily.
+                if (configAck.Success)
+                {
+                    var (_, currentHash) = await _landingPageService.GetLandingPageAsync();
+                    _gatewayLandingPageHash = currentHash;
+                }
                 _pendingConfigAck?.TrySetResult(configAck);
                 break;
 

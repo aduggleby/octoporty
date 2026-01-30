@@ -57,6 +57,13 @@ public sealed class AuthResultMessage : TunnelMessage
 
     [Key(2)]
     public string? GatewayVersion { get; init; }
+
+    /// <summary>
+    /// MD5 hash of the Gateway's current landing page HTML.
+    /// Agent compares this with its own hash to determine if sync is needed.
+    /// </summary>
+    [Key(3)]
+    public string? LandingPageHtmlHash { get; init; }
 }
 
 [MessagePackObject]
@@ -70,6 +77,18 @@ public sealed class ConfigSyncMessage : TunnelMessage
 
     [Key(1)]
     public required string ConfigHash { get; init; }
+
+    /// <summary>
+    /// Full landing page HTML content. Only sent when Agent's hash differs from Gateway's.
+    /// </summary>
+    [Key(2)]
+    public string? LandingPageHtml { get; init; }
+
+    /// <summary>
+    /// MD5 hash of the landing page HTML for validation.
+    /// </summary>
+    [Key(3)]
+    public string? LandingPageHtmlHash { get; init; }
 }
 
 [MessagePackObject]

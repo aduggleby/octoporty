@@ -156,6 +156,8 @@ if (!string.IsNullOrEmpty(dbPath))
 }
 builder.Services.AddDbContext<OctoportyDbContext>(options =>
     options.UseSqlite(connectionString));
+builder.Services.AddDbContextFactory<OctoportyDbContext>(options =>
+    options.UseSqlite(connectionString));
 
 // JWT Authentication with cookie support (HIGH-01)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -228,6 +230,9 @@ builder.Services.AddFastEndpoints();
 // SignalR
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<StatusNotifier>();
+
+// Landing page service (uses DbContextFactory for non-request contexts)
+builder.Services.AddSingleton<LandingPageService>();
 
 // Tunnel client services
 builder.Services.AddSingleton<TunnelClient>();

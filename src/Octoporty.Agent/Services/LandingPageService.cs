@@ -1,64 +1,84 @@
-// GatewayState.cs
-// Singleton service tracking Gateway runtime state.
-// Provides uptime calculation for heartbeat responses to connected Agents.
-// Stores the landing page HTML and hash for serving on the Gateway's FQDN.
+// LandingPageService.cs
+// Manages the Gateway landing page HTML stored in the Agent database.
+// Provides get/set/reset operations and MD5 hash computation for sync detection.
 
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Octoporty.Agent.Data;
+using Octoporty.Shared.Entities;
 
-namespace Octoporty.Gateway.Services;
+namespace Octoporty.Agent.Services;
 
-public class GatewayState
+public class LandingPageService
 {
-    private readonly DateTimeOffset _startTime = DateTimeOffset.UtcNow;
-    private readonly object _landingPageLock = new();
-    private string _landingPageHtml;
-    private string _landingPageHash;
+    private const string LandingPageKey = "LandingPageHtml";
+    private readonly IDbContextFactory<OctoportyDbContext> _dbContextFactory;
 
-    public GatewayState()
+    public LandingPageService(IDbContextFactory<OctoportyDbContext> dbContextFactory)
     {
-        // Initialize with default landing page
-        _landingPageHtml = GetDefaultHtml();
-        _landingPageHash = ComputeHash(_landingPageHtml);
+        _dbContextFactory = dbContextFactory;
     }
 
     /// <summary>
-    /// Returns the number of seconds the Gateway has been running.
+    /// Gets the current landing page HTML and its MD5 hash.
+    /// Returns the default landing page if no custom page is stored.
     /// </summary>
-    public long UptimeSeconds => (long)(DateTimeOffset.UtcNow - _startTime).TotalSeconds;
-
-    /// <summary>
-    /// Gets the current landing page HTML.
-    /// </summary>
-    public string LandingPageHtml
+    public async Task<(string Html, string Hash)> GetLandingPageAsync()
     {
-        get { lock (_landingPageLock) return _landingPageHtml; }
+        await using var db = await _dbContextFactory.CreateDbContextAsync();
+
+        var setting = await db.Settings.FindAsync(LandingPageKey);
+        var html = setting?.Value ?? GetDefaultHtml();
+        var hash = ComputeHash(html);
+
+        return (html, hash);
     }
 
     /// <summary>
-    /// Gets the MD5 hash of the current landing page HTML.
+    /// Saves custom landing page HTML to the database.
     /// </summary>
-    public string LandingPageHash
+    public async Task<string> SetLandingPageAsync(string html)
     {
-        get { lock (_landingPageLock) return _landingPageHash; }
-    }
+        await using var db = await _dbContextFactory.CreateDbContextAsync();
 
-    /// <summary>
-    /// Updates the landing page HTML and hash.
-    /// Called when Agent syncs a new landing page.
-    /// </summary>
-    public void UpdateLandingPage(string html, string hash)
-    {
-        lock (_landingPageLock)
+        var setting = await db.Settings.FindAsync(LandingPageKey);
+        if (setting is null)
         {
-            _landingPageHtml = html;
-            _landingPageHash = hash;
+            setting = new Settings { Key = LandingPageKey, Value = html, UpdatedAt = DateTime.UtcNow };
+            db.Settings.Add(setting);
         }
+        else
+        {
+            setting.Value = html;
+            setting.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await db.SaveChangesAsync();
+        return ComputeHash(html);
     }
 
     /// <summary>
-    /// Computes MD5 hash of HTML content.
-    /// MD5 is used for speed and simplicity - not for cryptographic security.
+    /// Resets to the default landing page by removing the custom setting.
+    /// </summary>
+    public async Task<(string Html, string Hash)> ResetToDefaultAsync()
+    {
+        await using var db = await _dbContextFactory.CreateDbContextAsync();
+
+        var setting = await db.Settings.FindAsync(LandingPageKey);
+        if (setting is not null)
+        {
+            db.Settings.Remove(setting);
+            await db.SaveChangesAsync();
+        }
+
+        var html = GetDefaultHtml();
+        return (html, ComputeHash(html));
+    }
+
+    /// <summary>
+    /// Computes MD5 hash of HTML content for sync comparison.
+    /// MD5 is used here for speed and simplicity - not for cryptographic security.
     /// </summary>
     public static string ComputeHash(string html)
     {
@@ -69,7 +89,7 @@ public class GatewayState
 
     /// <summary>
     /// Returns the default landing page HTML with Octoporty branding.
-    /// This matches the Agent's default landing page.
+    /// Uses external URL for logo to keep the page size small.
     /// </summary>
     public static string GetDefaultHtml()
     {

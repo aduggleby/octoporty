@@ -12,6 +12,8 @@ import type {
   ApiError,
   TriggerUpdateResponse,
   GetLogsResponse,
+  LandingPageResponse,
+  UpdateLandingPageResponse,
 } from '../types'
 
 const API_BASE = '/api/v1'
@@ -160,6 +162,27 @@ class ApiClient {
     return this.request<PortMapping>(`/mappings/${id}/toggle`, {
       method: 'PATCH',
       body: JSON.stringify({ enabled }),
+    })
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Settings - Landing Page
+  // ─────────────────────────────────────────────────────────────────────────
+
+  async getLandingPage(): Promise<LandingPageResponse> {
+    return this.request<LandingPageResponse>('/settings/landing-page')
+  }
+
+  async updateLandingPage(html: string): Promise<UpdateLandingPageResponse> {
+    return this.request<UpdateLandingPageResponse>('/settings/landing-page', {
+      method: 'PUT',
+      body: JSON.stringify({ html }),
+    })
+  }
+
+  async resetLandingPage(): Promise<LandingPageResponse> {
+    return this.request<LandingPageResponse>('/settings/landing-page', {
+      method: 'DELETE',
     })
   }
 }

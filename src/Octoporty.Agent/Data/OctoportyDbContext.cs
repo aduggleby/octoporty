@@ -17,6 +17,7 @@ public class OctoportyDbContext : DbContext
     public DbSet<PortMapping> PortMappings => Set<PortMapping>();
     public DbSet<ConnectionLog> ConnectionLogs => Set<ConnectionLog>();
     public DbSet<RequestLog> RequestLogs => Set<RequestLog>();
+    public DbSet<Settings> Settings => Set<Settings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +62,13 @@ public class OctoportyDbContext : DbContext
                 .HasForeignKey(e => e.ConnectionLogId)
                 .OnDelete(DeleteBehavior.SetNull);
             entity.HasIndex(e => e.Timestamp);
+        });
+
+        modelBuilder.Entity<Settings>(entity =>
+        {
+            entity.HasKey(e => e.Key);
+            entity.Property(e => e.Key).HasMaxLength(100).IsRequired();
+            // Value can be large (e.g., landing page HTML), so no max length
         });
     }
 }

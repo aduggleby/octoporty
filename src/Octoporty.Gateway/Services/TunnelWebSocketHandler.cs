@@ -111,7 +111,8 @@ public class TunnelWebSocketHandler
                 {
                     Success = isValid,
                     Error = isValid ? null : "Invalid API key",
-                    GatewayVersion = GatewayVersion
+                    GatewayVersion = GatewayVersion,
+                    LandingPageHtmlHash = _gatewayState.LandingPageHash
                 };
 
                 await connection.SendRawAsync(TunnelSerializer.Serialize(response), linkedCts.Token);
@@ -219,6 +220,15 @@ public class TunnelWebSocketHandler
             // Remove routes for disabled mappings
             var enabledIds = configSync.Mappings.Where(m => m.IsEnabled).Select(m => m.Id).ToHashSet();
             await _caddyClient.RemoveStaleRoutesAsync(enabledIds, ct);
+
+            // Update landing page if HTML was provided.
+            // Agent only sends HTML when the hash differs, saving bandwidth.
+            if (!string.IsNullOrEmpty(configSync.LandingPageHtml) &&
+                !string.IsNullOrEmpty(configSync.LandingPageHtmlHash))
+            {
+                _gatewayState.UpdateLandingPage(configSync.LandingPageHtml, configSync.LandingPageHtmlHash);
+                _logger.LogInformation("Landing page updated (hash: {Hash})", configSync.LandingPageHtmlHash[..8]);
+            }
 
             await connection.SendAsync(new ConfigAckMessage
             {

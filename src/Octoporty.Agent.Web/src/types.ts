@@ -127,3 +127,14 @@ export interface TriggerUpdateResponse {
   gatewayVersion?: string
   status?: UpdateStatus
 }
+
+// Landing Page types
+export interface LandingPageResponse {
+  html: string
+  hash: string
+  isDefault: boolean
+}
+
+export interface UpdateLandingPageResponse {
+  hash: string
+}

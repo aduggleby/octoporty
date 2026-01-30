@@ -17,6 +17,7 @@ import { DashboardPage } from './pages/Dashboard'
 import { MappingsPage } from './pages/Mappings'
 import { MappingDetailPage } from './pages/MappingDetail'
 import { GatewayPage } from './pages/Gateway'
+import { SettingsPage } from './pages/Settings'
 import { api } from './api/client'
 import type { ReactNode } from 'react'
 
@@ -97,6 +98,17 @@ export function App() {
               <ProtectedRoute>
                 <Layout>
                   <GatewayPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SettingsPage />
                 </Layout>
               </ProtectedRoute>
             }
