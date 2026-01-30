@@ -30,6 +30,18 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.41
+
+**2026-01-30**
+
+- **Customizable Landing Page** - New Settings page in the Agent UI to customize the Gateway landing page HTML shown when no mapping exists for a domain. Features include:
+  - Live HTML preview while editing
+  - MD5 hash-based change detection for efficient syncing
+  - Reset to default Octoporty branding
+  - Automatic sync to Gateway when changes are saved
+
+---
+
 ## 0.9.40
 
 **2026-01-29**

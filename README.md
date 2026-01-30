@@ -42,6 +42,7 @@ Octoporty is a self-hosted alternative to ngrok that lets you expose internal se
 - **Multi-Domain Support** - Route multiple domains to different internal services
 - **Automatic Reconnection** - Agent maintains persistent connection with exponential backoff
 - **Gateway Self-Update** - Update the Gateway from the Agent UI when version mismatch is detected
+- **Customizable Landing Page** - Edit the HTML shown when no mapping exists for a domain
 - **Request Logging** - Audit trail for all tunneled requests
 - **Rate Limiting** - Built-in protection against brute force attacks
 - **Startup Banner** - Visual configuration display at startup with obfuscated secrets for easy verification
@@ -346,6 +347,7 @@ The Agent includes an embedded React web application for managing port mappings.
 
 - **Dashboard** - Overview of tunnel status and active mappings
 - **Port Mappings** - Create, edit, and delete domain-to-service mappings
+- **Settings** - Customize the Gateway landing page with your own HTML and branding
 - **Gateway Logs** - Real-time streaming of Gateway logs with historical log retrieval and infinite scroll
 - **Connection Logs** - View connection history and status
 - **Request Logs** - Audit trail of all tunneled requests
@@ -426,6 +428,14 @@ dotnet test --filter "FullyQualifiedName~ComprehensiveUi"
 | POST | `/api/mappings` | Create new mapping |
 | PUT | `/api/mappings/{id}` | Update mapping |
 | DELETE | `/api/mappings/{id}` | Delete mapping |
+
+### Settings API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/settings/landing-page` | Get current landing page HTML and hash |
+| PUT | `/api/v1/settings/landing-page` | Update landing page HTML (max 1MB) |
+| DELETE | `/api/v1/settings/landing-page` | Reset to default Octoporty landing page |
 
 ### Authentication
 
