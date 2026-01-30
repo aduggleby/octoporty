@@ -157,7 +157,7 @@ services:
   agent:
     image: ghcr.io/aduggleby/octoporty-agent:latest
     environment:
-      - Agent__GatewayUrl=wss://your-gateway-domain.com/tunnel
+      - Agent__GatewayFqdn=your-gateway-domain.com
       - Agent__ApiKey=your-secure-api-key-min-32-chars
       - Agent__JwtSecret=your-jwt-secret-min-32-chars
       - Agent__Auth__Username=admin
@@ -302,7 +302,8 @@ When you update the Agent to a newer version, it can detect that the Gateway is 
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `Agent__GatewayUrl` | WebSocket URL to Gateway | Required |
+| `Agent__GatewayFqdn` | Gateway domain (e.g., `gateway.example.com`). Recommended over `GatewayUrl`. | - |
+| `Agent__GatewayUrl` | WebSocket URL to Gateway. If not set, derived from `GatewayFqdn`. | Derived |
 | `Agent__ApiKey` | Pre-shared key matching Gateway | Required |
 | `Agent__JwtSecret` | JWT signing key (min 32 chars) | Required |
 | `Agent__Auth__Username` | Web UI login username | Required |

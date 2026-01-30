@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.42
+
+**2026-01-30**
+
+- **Simplified Gateway Configuration** - New `Agent__GatewayFqdn` option lets you configure the Agent with just the Gateway domain (e.g., `gateway.example.com`) instead of the full WebSocket URL. The WebSocket URL is automatically derived as `wss://{GatewayFqdn}/tunnel`. The FQDN is also sent to the Gateway during config sync, enabling automatic landing page routing without manual Gateway FQDN configuration.
+
+---
+
 ## 0.9.41
 
 **2026-01-30**

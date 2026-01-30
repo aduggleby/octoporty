@@ -1,7 +1,7 @@
 #!/bin/bash
 # install-agent.sh
 # Octoporty Agent installation script
-# Version: 0.9.41
+# Version: 0.9.42
 # Usage: curl -fsSL https://octoporty.com/install-agent.sh | bash
 
 set -e
@@ -9,7 +9,7 @@ set -e
 INSTALL_DIR="/opt/octoporty/agent"
 COMPOSE_FILE="docker-compose.yml"
 ENV_FILE=".env"
-SCRIPT_VERSION="0.9.41"
+SCRIPT_VERSION="0.9.42"
 
 cat << 'EOF'
 
