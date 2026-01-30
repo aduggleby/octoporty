@@ -89,6 +89,13 @@ public sealed class ConfigSyncMessage : TunnelMessage
     /// </summary>
     [Key(3)]
     public string? LandingPageHtmlHash { get; init; }
+
+    /// <summary>
+    /// Gateway FQDN extracted from Agent's GatewayUrl setting.
+    /// Gateway uses this for landing page routing if not manually configured.
+    /// </summary>
+    [Key(4)]
+    public string? GatewayFqdn { get; init; }
 }
 
 [MessagePackObject]

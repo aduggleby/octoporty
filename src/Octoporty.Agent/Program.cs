@@ -55,6 +55,14 @@ if (string.IsNullOrWhiteSpace(agentOptions.Auth.Password))
         "Configure a strong password for the admin user.");
 }
 
+// Require GatewayFqdn or GatewayUrl to be set
+if (string.IsNullOrWhiteSpace(agentOptions.GatewayFqdn) && string.IsNullOrWhiteSpace(agentOptions.GatewayUrl))
+{
+    throw new InvalidOperationException(
+        "Agent__GatewayFqdn must be set (e.g., 'gateway.example.com'). " +
+        "This is the FQDN of your Octoporty Gateway server.");
+}
+
 // Get current UID/GID for debugging container user issues
 var uid = "unknown";
 var gid = "unknown";
@@ -85,7 +93,8 @@ catch
 // Display startup banner with configuration
 StartupBanner.Print("Agent", new Dictionary<string, string?>
 {
-    ["GatewayUrl"] = agentOptions.GatewayUrl,
+    ["GatewayFqdn"] = agentOptions.GatewayFqdn,
+    ["GatewayUrl"] = agentOptions.EffectiveGatewayUrl,
     ["ApiKey"] = agentOptions.ApiKey,
     ["JwtSecret"] = agentOptions.JwtSecret,
     ["Username"] = agentOptions.Auth.Username,

@@ -85,7 +85,7 @@ public class TunnelClient : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Tunnel client starting, connecting to {Url}", _options.GatewayUrl);
+        _logger.LogInformation("Tunnel client starting, connecting to {Url}", _options.EffectiveGatewayUrl);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -133,7 +133,7 @@ public class TunnelClient : BackgroundService
 
         try
         {
-            await _webSocket.ConnectAsync(new Uri(_options.GatewayUrl), _connectionCts.Token);
+            await _webSocket.ConnectAsync(new Uri(_options.EffectiveGatewayUrl), _connectionCts.Token);
             _logger.LogInformation("WebSocket connected to Gateway");
 
             // Authenticate
@@ -259,7 +259,9 @@ public class TunnelClient : BackgroundService
             ConfigHash = configHash,
             // Only include HTML if hashes differ to save bandwidth
             LandingPageHtml = needsLandingPageSync ? landingPageHtml : null,
-            LandingPageHtmlHash = landingPageHash
+            LandingPageHtmlHash = landingPageHash,
+            // Send FQDN so Gateway knows which host to serve landing page for
+            GatewayFqdn = _options.GatewayFqdn
         };
 
         _logger.LogDebug("Sending ConfigSyncMessage with {Count} mappings, hash {Hash}",
@@ -357,7 +359,8 @@ public class TunnelClient : BackgroundService
             Mappings = mappings,
             ConfigHash = configHash,
             LandingPageHtml = needsLandingPageSync ? landingPageHtml : null,
-            LandingPageHtmlHash = landingPageHash
+            LandingPageHtmlHash = landingPageHash,
+            GatewayFqdn = _options.GatewayFqdn
         };
 
         _logger.LogDebug("Resyncing configuration with {Count} mappings, hash {Hash}",

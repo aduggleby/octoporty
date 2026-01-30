@@ -230,6 +230,14 @@ public class TunnelWebSocketHandler
                 _logger.LogInformation("Landing page updated (hash: {Hash})", configSync.LandingPageHtmlHash[..8]);
             }
 
+            // Store Gateway FQDN from Agent if provided.
+            // This enables landing page routing without manual Gateway configuration.
+            if (!string.IsNullOrEmpty(configSync.GatewayFqdn))
+            {
+                _gatewayState.GatewayFqdn = configSync.GatewayFqdn;
+                _logger.LogInformation("Gateway FQDN set from Agent: {Fqdn}", configSync.GatewayFqdn);
+            }
+
             await connection.SendAsync(new ConfigAckMessage
             {
                 Success = true,

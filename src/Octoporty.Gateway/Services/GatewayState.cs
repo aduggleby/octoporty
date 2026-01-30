@@ -14,12 +14,23 @@ public class GatewayState
     private readonly object _landingPageLock = new();
     private string _landingPageHtml;
     private string _landingPageHash;
+    private string? _gatewayFqdn;
 
     public GatewayState()
     {
         // Initialize with default landing page
         _landingPageHtml = GetDefaultHtml();
         _landingPageHash = ComputeHash(_landingPageHtml);
+    }
+
+    /// <summary>
+    /// Gateway FQDN received from Agent during config sync.
+    /// Used for landing page routing when not manually configured.
+    /// </summary>
+    public string? GatewayFqdn
+    {
+        get { lock (_landingPageLock) return _gatewayFqdn; }
+        set { lock (_landingPageLock) _gatewayFqdn = value; }
     }
 
     /// <summary>

@@ -74,7 +74,7 @@ StartupBanner.Print("Gateway", new Dictionary<string, string?>
 {
     ["ApiKey"] = gatewayOptions.ApiKey,
     ["CaddyAdminUrl"] = gatewayOptions.CaddyAdminUrl,
-    ["GatewayFqdn"] = gatewayOptions.GatewayFqdn,
+    ["GatewayFqdn"] = string.IsNullOrEmpty(gatewayOptions.GatewayFqdn) ? "(from Agent)" : gatewayOptions.GatewayFqdn,
     ["Environment"] = app.Environment.EnvironmentName
 });
 
@@ -87,12 +87,18 @@ app.Use(async (context, next) =>
     var options = context.RequestServices.GetRequiredService<IOptions<GatewayOptions>>().Value;
     var state = context.RequestServices.GetRequiredService<GatewayState>();
 
+    // Use configured FQDN, or fall back to FQDN received from Agent during config sync.
+    // This eliminates the need for manual Gateway configuration.
+    var gatewayFqdn = !string.IsNullOrEmpty(options.GatewayFqdn)
+        ? options.GatewayFqdn
+        : state.GatewayFqdn;
+
     // Only serve landing page if:
-    // 1. GatewayFqdn is configured
+    // 1. GatewayFqdn is known (from config or Agent sync)
     // 2. Request host matches the Gateway's FQDN
     // 3. Request path is the root "/"
-    if (!string.IsNullOrEmpty(options.GatewayFqdn) &&
-        context.Request.Host.Host.Equals(options.GatewayFqdn, StringComparison.OrdinalIgnoreCase) &&
+    if (!string.IsNullOrEmpty(gatewayFqdn) &&
+        context.Request.Host.Host.Equals(gatewayFqdn, StringComparison.OrdinalIgnoreCase) &&
         context.Request.Path == "/")
     {
         context.Response.ContentType = "text/html; charset=utf-8";

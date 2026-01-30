@@ -47,7 +47,7 @@ public class GetStatusEndpoint : EndpointWithoutRequest<AgentStatusResponse>
         await Send.OkAsync(new AgentStatusResponse
         {
             ConnectionStatus = _tunnelClient.State.ToString(),
-            GatewayUrl = RedactUrl(_options.GatewayUrl), // Redact credentials if present
+            GatewayUrl = RedactUrl(_options.EffectiveGatewayUrl), // Redact credentials if present
             LastConnected = _tunnelClient.LastConnectedAt,
             LastDisconnected = null,
             ReconnectAttempts = 0,
