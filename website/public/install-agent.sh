@@ -266,6 +266,9 @@ services:
     image: ghcr.io/aduggleby/octoporty-agent:latest
     container_name: octoporty-agent
     environment:
+      # Suppress ASP.NET warning about HTTP_PORTS/HTTPS_PORTS vs URLS conflict
+      - HTTP_PORTS=
+      - HTTPS_PORTS=
       - Agent__GatewayUrl=${AGENT_GATEWAY_URL}
       - Agent__ApiKey=${AGENT_API_KEY}
       - Agent__JwtSecret=${AGENT_JWT_SECRET}

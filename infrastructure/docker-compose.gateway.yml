@@ -17,6 +17,10 @@ services:
       # Bind mount for update signal file (host watcher monitors this)
       - octoporty_data:/data
     environment:
+      # Suppress ASP.NET warning about HTTP_PORTS/HTTPS_PORTS vs URLS conflict.
+      # Base .NET image sets HTTP_PORTS=8080 but we use URLS for port binding.
+      - HTTP_PORTS=
+      - HTTPS_PORTS=
       # API key for Agent authentication (minimum 32 characters)
       - Gateway__ApiKey=${GATEWAY_API_KEY:?Gateway API key required}
       # Caddy admin API for route management

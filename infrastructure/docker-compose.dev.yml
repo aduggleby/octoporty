@@ -9,6 +9,9 @@ services:
     ports:
       - "17200:8080"
     environment:
+      # Suppress ASP.NET warning about HTTP_PORTS/HTTPS_PORTS vs URLS conflict
+      - HTTP_PORTS=
+      - HTTPS_PORTS=
       - Gateway__ApiKey=dev-api-key-change-in-production
       - Gateway__CaddyAdminUrl=http://caddy:17202
       - Logging__LogLevel=Debug
@@ -40,6 +43,9 @@ services:
     ports:
       - "17201:8080"
     environment:
+      # Suppress ASP.NET warning about HTTP_PORTS/HTTPS_PORTS vs URLS conflict
+      - HTTP_PORTS=
+      - HTTPS_PORTS=
       - Agent__GatewayUrl=ws://gateway:8080/tunnel
       - Agent__ApiKey=dev-api-key-change-in-production
       - Agent__JwtSecret=dev-jwt-secret-minimum-32-characters-long

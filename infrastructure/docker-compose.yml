@@ -9,6 +9,9 @@ services:
     ports:
       - "17200:8080"
     environment:
+      # Suppress ASP.NET warning about HTTP_PORTS/HTTPS_PORTS vs URLS conflict
+      - HTTP_PORTS=
+      - HTTPS_PORTS=
       - Gateway__ApiKey=${API_KEY}
       - Gateway__CaddyAdminUrl=http://caddy:17202
       - Logging__LogLevel=Information

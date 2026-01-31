@@ -273,6 +273,9 @@ services:
     image: ghcr.io/aduggleby/octoporty-gateway:latest
     container_name: octoporty-gateway
     environment:
+      # Suppress ASP.NET warning about HTTP_PORTS/HTTPS_PORTS vs URLS conflict
+      - HTTP_PORTS=
+      - HTTPS_PORTS=
       - Gateway__ApiKey=${GATEWAY_API_KEY}
       - Gateway__CaddyAdminUrl=${CADDY_ADMIN_URL:-http://caddy:2019}
     ports:
