@@ -27,7 +27,6 @@ public class ComprehensiveUiTests : TestBase
             return;
         }
 
-        await Page.FillAsync("input[placeholder='Enter username']", TestUsername);
         await Page.FillAsync("input[placeholder='Enter password']", TestPassword);
 
         // Click login and verify button shows loading state or navigates
@@ -58,7 +57,6 @@ public class ComprehensiveUiTests : TestBase
             return;
         }
 
-        await Page.FillAsync("input[placeholder='Enter username']", "wronguser");
         await Page.FillAsync("input[placeholder='Enter password']", "wrongpass");
         await Page.ClickAsync("button[type='submit']");
 
@@ -793,7 +791,7 @@ public class ComprehensiveUiTests : TestBase
 
         // Login to get token
         var loginContent = new StringContent(
-            System.Text.Json.JsonSerializer.Serialize(new { username = TestUsername, password = TestPassword }),
+            System.Text.Json.JsonSerializer.Serialize(new { password = TestPassword }),
             System.Text.Encoding.UTF8,
             "application/json");
 

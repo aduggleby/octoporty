@@ -26,7 +26,6 @@ public class LandingPageApiTests : TestBase
         using var client = new HttpClient();
         var loginRequest = new
         {
-            username = TestUsername,
             password = TestPassword
         };
 

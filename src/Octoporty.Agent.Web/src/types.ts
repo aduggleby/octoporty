@@ -53,7 +53,6 @@ export interface ApiError {
 }
 
 export interface LoginRequest {
-  username: string
   password: string
 }
 

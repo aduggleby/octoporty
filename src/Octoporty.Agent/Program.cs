@@ -47,12 +47,13 @@ if (string.IsNullOrWhiteSpace(agentOptions.JwtSecret) || agentOptions.JwtSecret.
         "Generate one with: openssl rand -hex 32");
 }
 
-// CRITICAL-07: Require non-empty password
-if (string.IsNullOrWhiteSpace(agentOptions.Auth.Password))
+// CRITICAL-07: Require SHA-512 crypt password hash
+if (string.IsNullOrWhiteSpace(agentOptions.Auth.PasswordHash) ||
+    !agentOptions.Auth.PasswordHash.StartsWith("$6$"))
 {
     throw new InvalidOperationException(
-        "Agent__Auth__Password must be set. " +
-        "Configure a strong password for the admin user.");
+        "Agent__Auth__PasswordHash must be set to a valid SHA-512 crypt hash. " +
+        "Generate one with: openssl passwd -6 \"YourPassword\"");
 }
 
 // Require GatewayFqdn or GatewayUrl to be set
@@ -91,14 +92,18 @@ catch
 }
 
 // Display startup banner with configuration
+// PasswordHash is shown truncated - format: $6$salt$hash... (first 20 chars + ...)
+var hashPreview = agentOptions.Auth.PasswordHash.Length > 20
+    ? agentOptions.Auth.PasswordHash[..20] + "..."
+    : agentOptions.Auth.PasswordHash;
+
 StartupBanner.Print("Agent", new Dictionary<string, string?>
 {
     ["GatewayFqdn"] = agentOptions.GatewayFqdn,
     ["GatewayUrl"] = agentOptions.EffectiveGatewayUrl,
     ["ApiKey"] = agentOptions.ApiKey,
     ["JwtSecret"] = agentOptions.JwtSecret,
-    ["Username"] = agentOptions.Auth.Username,
-    ["Password"] = agentOptions.Auth.Password,
+    ["PasswordHash"] = hashPreview,
     ["Environment"] = builder.Environment.EnvironmentName,
     ["Container UID:GID"] = $"{uid}:{gid}"
 });

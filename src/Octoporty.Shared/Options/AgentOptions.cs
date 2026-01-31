@@ -33,6 +33,10 @@ public class AgentOptions
 
 public class AuthOptions
 {
-    public string Username { get; set; } = "admin";
-    public string Password { get; set; } = "";
+    /// <summary>
+    /// SHA-512 crypt hash of the admin password.
+    /// Generate with: openssl passwd -6 "YourPassword"
+    /// Format: $6$salt$hash or $6$rounds=N$salt$hash
+    /// </summary>
+    public string PasswordHash { get; set; } = "";
 }

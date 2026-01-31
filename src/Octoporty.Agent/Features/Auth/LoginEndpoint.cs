@@ -1,6 +1,6 @@
 // LoginEndpoint.cs
-// Authenticates users and issues JWT access tokens with HttpOnly cookie storage.
-// Uses constant-time comparison to prevent timing attacks on credentials.
+// Authenticates admin user via SHA-512 crypt password hash verification.
+// Issues JWT access tokens with HttpOnly cookie storage.
 // Rate limited: 5 failed attempts in 60s triggers 5-minute lockout.
 // Returns both cookie and response body tokens for SPA compatibility.
 
@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Octoporty.Agent.Services;
 using Octoporty.Shared.Options;
+using Octoporty.Shared.Security;
 
 namespace Octoporty.Agent.Features.Auth;
 
@@ -62,16 +63,11 @@ public class LoginEndpoint : Endpoint<LoginRequest, LoginResponse>
             return;
         }
 
-        // Validate credentials using constant-time comparison
-        var expectedUsername = Encoding.UTF8.GetBytes(_options.Auth.Username);
-        var providedUsername = Encoding.UTF8.GetBytes(req.Username);
-        var usernameValid = CryptographicOperations.FixedTimeEquals(expectedUsername, providedUsername);
+        // Validate password using SHA-512 crypt hash verification.
+        // Sha512CryptVerifier uses constant-time comparison internally.
+        var passwordValid = Sha512CryptVerifier.Verify(req.Password, _options.Auth.PasswordHash);
 
-        var expectedPassword = Encoding.UTF8.GetBytes(_options.Auth.Password);
-        var providedPassword = Encoding.UTF8.GetBytes(req.Password);
-        var passwordValid = CryptographicOperations.FixedTimeEquals(expectedPassword, providedPassword);
-
-        if (!usernameValid || !passwordValid)
+        if (!passwordValid)
         {
             // HIGH-04: Don't log username to prevent enumeration
             _logger.LogWarning("Failed login attempt from {RemoteIp}", clientIp);
@@ -84,7 +80,8 @@ public class LoginEndpoint : Endpoint<LoginRequest, LoginResponse>
         _rateLimiter.RecordSuccess(clientIp);
 
         // Generate access token (short-lived)
-        var accessToken = GenerateAccessToken(req.Username);
+        // Single admin user - no username needed
+        var accessToken = GenerateAccessToken();
         var accessExpiresAt = DateTime.UtcNow.Add(AccessTokenLifetime);
 
         // Generate refresh token (longer-lived)
@@ -92,7 +89,7 @@ public class LoginEndpoint : Endpoint<LoginRequest, LoginResponse>
         var refreshExpiresAt = DateTime.UtcNow.Add(RefreshTokenLifetime);
 
         // Store refresh token for validation
-        _tokenStore.Store(refreshToken, req.Username, refreshExpiresAt);
+        _tokenStore.Store(refreshToken, "admin", refreshExpiresAt);
 
         // HIGH-01/02: Set tokens in HttpOnly cookies for security
         SetAuthCookies(accessToken, accessExpiresAt, refreshToken, refreshExpiresAt);
@@ -109,15 +106,16 @@ public class LoginEndpoint : Endpoint<LoginRequest, LoginResponse>
         }, ct);
     }
 
-    private string GenerateAccessToken(string username)
+    private string GenerateAccessToken()
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.JwtSecret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        // Single admin user - hardcoded since there's only one user
         var claims = new[]
         {
-            new Claim(ClaimTypes.Name, username),
-            new Claim(JwtRegisteredClaimNames.Sub, username),
+            new Claim(ClaimTypes.Name, "admin"),
+            new Claim(JwtRegisteredClaimNames.Sub, "admin"),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim("token_type", "access")
         };

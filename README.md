@@ -160,8 +160,8 @@ services:
       - Agent__GatewayFqdn=your-gateway-domain.com
       - Agent__ApiKey=your-secure-api-key-min-32-chars
       - Agent__JwtSecret=your-jwt-secret-min-32-chars
-      - Agent__Auth__Username=admin
-      - Agent__Auth__Password=your-secure-password
+      # Generate hash with: openssl passwd -6 "your-password"
+      - Agent__Auth__PasswordHash=$6$rounds=5000$yoursalt$yourhash
     ports:
       - "17201:17201"
     volumes:
@@ -306,8 +306,7 @@ When you update the Agent to a newer version, it can detect that the Gateway is 
 | `Agent__GatewayUrl` | WebSocket URL to Gateway. If not set, derived from `GatewayFqdn`. | Derived |
 | `Agent__ApiKey` | Pre-shared key matching Gateway | Required |
 | `Agent__JwtSecret` | JWT signing key (min 32 chars) | Required |
-| `Agent__Auth__Username` | Web UI login username | Required |
-| `Agent__Auth__Password` | Web UI login password | Required |
+| `Agent__Auth__PasswordHash` | SHA-512 crypt hash for Web UI login (generate with `openssl passwd -6`) | Required |
 | `Agent__Port` | Agent web UI port | `17201` |
 | `ConnectionStrings__DefaultConnection` | Database connection string | SQLite at `/app/data/octoporty.db` |
 

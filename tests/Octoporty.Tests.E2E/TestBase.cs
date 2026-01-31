@@ -12,7 +12,6 @@ public class TestBase : PageTest
 {
     protected const string AgentUrl = "http://localhost:17201";
     protected const string GatewayUrl = "http://46.224.221.66:17200";
-    protected const string TestUsername = "admin";
     protected const string TestPassword = "octoporty-test-password-123";
 
     protected Process? AgentProcess;
@@ -108,8 +107,7 @@ public class TestBase : PageTest
         if (isLoggedIn)
             return;
 
-        // Fill login form with exact placeholder selectors
-        await Page.FillAsync("input[placeholder='Enter username']", TestUsername);
+        // Fill login form with password only (no username since single admin user)
         await Page.FillAsync("input[placeholder='Enter password']", TestPassword);
         await Page.ClickAsync("button[type='submit']");
 
@@ -163,7 +161,6 @@ public class TestBase : PageTest
         if (Page.Url.Contains("/login"))
         {
             // Session expired - re-login and try again
-            await Page.FillAsync("input[placeholder='Enter username']", TestUsername);
             await Page.FillAsync("input[placeholder='Enter password']", TestPassword);
             await Page.ClickAsync("button[type='submit']");
 

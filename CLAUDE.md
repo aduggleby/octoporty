@@ -96,7 +96,8 @@ Internet → Caddy → Gateway (Hetzner) ←WebSocket→ Agent (private network)
 ## Authentication
 
 - **Agent↔Gateway:** Pre-shared API key (min 32 chars), constant-time comparison
-- **Web UI:** JWT with HttpOnly cookies, refresh tokens in memory store
+- **Web UI:** Single admin user, password verified via SHA-512 crypt hash, JWT with HttpOnly cookies, refresh tokens in memory store
+- **Password Hash:** Generate with `openssl passwd -6 "YourPassword"`, format: `$6$salt$hash`
 - **Rate limiting:** Login endpoint with exponential backoff lockout
 
 ## Database
@@ -269,7 +270,7 @@ Environment variables (see `.env.example`):
 - `Agent__GatewayUrl` - WebSocket URL to Gateway (optional, overrides derived URL from GatewayFqdn)
 - `Agent__ApiKey` / `Gateway__ApiKey` - Shared secret
 - `Agent__JwtSecret` - JWT signing (min 32 chars)
-- `Agent__Auth__Username/Password` - Web UI credentials
+- `Agent__Auth__PasswordHash` - SHA-512 crypt hash for Web UI login (generate with `openssl passwd -6 "password"`)
 - `Gateway__CaddyAdminUrl` - Caddy Admin API endpoint
 - `Gateway__GatewayFqdn` - Optional, Gateway's own FQDN for landing page (auto-derived from Agent if not set)
 

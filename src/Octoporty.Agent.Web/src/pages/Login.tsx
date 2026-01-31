@@ -11,7 +11,6 @@ import type { ApiError } from '../types'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -22,11 +21,11 @@ export function LoginPage() {
     setIsLoading(true)
 
     try {
-      await api.login({ username, password })
+      await api.login({ password })
       navigate('/')
     } catch (err) {
       const apiError = err as ApiError
-      setError(apiError.message || 'Invalid credentials')
+      setError(apiError.message || 'Invalid password')
     } finally {
       setIsLoading(false)
     }
@@ -137,38 +136,6 @@ export function LoginPage() {
             </motion.div>
           )}
 
-          {/* Username */}
-          <div>
-            <label className="label">Username</label>
-            <div className="relative">
-              {/* Icon container: fixed width of 48px (w-12) to match input's pl-12 padding */}
-              {/* Uses flex centering to perfectly center the 20px icon within this space */}
-              <div className="absolute inset-y-0 left-0 w-12 flex items-center justify-center pointer-events-none">
-                <svg
-                  className="w-5 h-5 text-text-muted"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <input
-                type="text"
-                className="input pl-12!"
-                placeholder="Enter username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                autoFocus
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
           {/* Password */}
           <div>
             <label className="label">Password</label>
@@ -195,6 +162,7 @@ export function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                autoFocus
                 disabled={isLoading}
               />
             </div>
@@ -204,7 +172,7 @@ export function LoginPage() {
           <button
             type="submit"
             className="btn btn-primary w-full btn-lg"
-            disabled={isLoading || !username || !password}
+            disabled={isLoading || !password}
           >
             {isLoading ? (
               <>

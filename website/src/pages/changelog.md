@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.43
+
+**2026-01-31**
+
+- Fix Gateway landing page to properly handle all URL paths
+
+---
+
 ## 0.9.42
 
 **2026-01-30**
