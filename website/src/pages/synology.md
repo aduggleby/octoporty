@@ -54,8 +54,7 @@ Click **Advanced Settings**, then the **Environment** tab. Add these variables:
 | `Agent__GatewayUrl` | `wss://gateway.yourdomain.com/tunnel` |
 | `Agent__ApiKey` | Your Gateway API key (min 32 chars) |
 | `Agent__JwtSecret` | Generate with `openssl rand -base64 32` |
-| `Agent__Auth__Username` | `admin` |
-| `Agent__Auth__Password` | Your secure password |
+| `Agent__Auth__PasswordHash` | SHA-512 crypt hash (generate with `openssl passwd -6 "password"`) |
 
 ### Step 6: Port Settings
 
@@ -134,8 +133,8 @@ services:
       - Agent__GatewayUrl=wss://gateway.yourdomain.com/tunnel
       - Agent__ApiKey=your-gateway-api-key
       - Agent__JwtSecret=your-jwt-secret-min-32-chars
-      - Agent__Auth__Username=admin
-      - Agent__Auth__Password=your-secure-password
+      # Generate hash with: openssl passwd -6 "your-password"
+      - Agent__Auth__PasswordHash=$6$rounds=5000$yoursalt$yourhash
     ports:
       - "17201:17201"
     volumes:

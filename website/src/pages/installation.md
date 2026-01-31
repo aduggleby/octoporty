@@ -90,8 +90,8 @@ services:
       - Agent__GatewayUrl=wss://gateway.yourdomain.com/tunnel
       - Agent__ApiKey=your-api-key-min-32-chars
       - Agent__JwtSecret=your-jwt-secret-min-32-chars
-      - Agent__Auth__Username=admin
-      - Agent__Auth__Password=your-password
+      # Generate hash with: openssl passwd -6 "your-password"
+      - Agent__Auth__PasswordHash=$6$rounds=5000$yoursalt$yourhash
     ports:
       - "17201:17201"
     volumes:

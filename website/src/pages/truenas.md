@@ -51,8 +51,7 @@ Click **Add** for each environment variable:
 | `Agent__GatewayUrl` | `wss://gateway.yourdomain.com/tunnel` |
 | `Agent__ApiKey` | Your Gateway API key (min 32 chars) |
 | `Agent__JwtSecret` | Generate with `openssl rand -base64 32` |
-| `Agent__Auth__Username` | `admin` |
-| `Agent__Auth__Password` | Your secure password |
+| `Agent__Auth__PasswordHash` | SHA-512 crypt hash (generate with `openssl passwd -6 "password"`) |
 
 ### Step 6: Configure Networking
 
@@ -87,7 +86,7 @@ Once deployed, access the Octoporty web UI at:
 http://your-truenas-ip:17201
 ```
 
-Log in with the username and password you configured.
+Log in with the password you configured.
 
 ### Updating via TrueNAS UI
 
@@ -136,8 +135,7 @@ services:
       - Agent__GatewayUrl=${AGENT_GATEWAY_URL}
       - Agent__ApiKey=${AGENT_API_KEY}
       - Agent__JwtSecret=${AGENT_JWT_SECRET}
-      - Agent__Auth__Username=${AGENT_USERNAME}
-      - Agent__Auth__Password=${AGENT_PASSWORD}
+      - Agent__Auth__PasswordHash=${AGENT_PASSWORD_HASH}
     ports:
       - "17201:17201"
     volumes:
@@ -159,8 +157,8 @@ Add your settings:
 AGENT_GATEWAY_URL=wss://gateway.yourdomain.com/tunnel
 AGENT_API_KEY=your-gateway-api-key-here
 AGENT_JWT_SECRET=your-jwt-secret-min-32-chars
-AGENT_USERNAME=admin
-AGENT_PASSWORD=your-secure-password
+# Generate hash with: openssl passwd -6 "your-password"
+AGENT_PASSWORD_HASH=$6$rounds=5000$yoursalt$yourhash
 ```
 
 ### Step 4: Start the Agent

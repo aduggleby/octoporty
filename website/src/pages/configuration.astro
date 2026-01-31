@@ -14,8 +14,7 @@ const agentConfig = [
   { name: "Agent__GatewayUrl", required: false, default: "Derived from GatewayFqdn", desc: "WebSocket URL to the Gateway. If not set, derived from GatewayFqdn as wss://{GatewayFqdn}/tunnel." },
   { name: "Agent__ApiKey", required: true, default: "-", desc: "Pre-shared key matching the Gateway's ApiKey. Must be identical on both sides." },
   { name: "Agent__JwtSecret", required: true, default: "-", desc: "Secret key for signing JWT tokens. Must be at least 32 characters." },
-  { name: "Agent__Auth__Username", required: true, default: "-", desc: "Username for the web management UI." },
-  { name: "Agent__Auth__Password", required: true, default: "-", desc: "Password for the web management UI. Use a strong password." },
+  { name: "Agent__Auth__PasswordHash", required: true, default: "-", desc: "SHA-512 crypt hash for web UI login. Generate with: openssl passwd -6 \"your-password\"" },
   { name: "Agent__Port", required: false, default: "17201", desc: "Port the Agent web UI listens on." },
   { name: "ConnectionStrings__DefaultConnection", required: false, default: "SQLite", desc: "Database connection string. Defaults to SQLite file storage." },
   { name: "Agent__HeartbeatIntervalSeconds", required: false, default: "30", desc: "Interval between heartbeat messages to keep the tunnel alive." },
@@ -38,8 +37,8 @@ GATEWAY_API_KEY=your-secure-api-key-at-least-32-characters-long
 AGENT_GATEWAY_FQDN=gateway.yourdomain.com
 AGENT_API_KEY=your-secure-api-key-at-least-32-characters-long
 AGENT_JWT_SECRET=your-jwt-secret-at-least-32-characters-long
-AGENT_USERNAME=admin
-AGENT_PASSWORD=your-secure-admin-password
+# Generate password hash with: openssl passwd -6 "your-password"
+AGENT_AUTH_PASSWORD_HASH=$6$rounds=5000$yoursalt$yourhash
 
 # Optional: Custom database path
 # CONNECTION_STRING=Data Source=/custom/path/octoporty.db`;

@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.44
+
+**2026-01-31**
+
+- Simplify login to password-only authentication using industry-standard SHA-512 crypt hashing
+
+---
+
 ## 0.9.43
 
 **2026-01-31**

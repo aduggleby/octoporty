@@ -442,14 +442,15 @@ dotnet test --filter "FullyQualifiedName~ComprehensiveUi"
 The Agent Web UI uses JWT authentication with HttpOnly cookies. Login via:
 
 ```
-POST /api/auth/login
+POST /api/v1/auth/login
 Content-Type: application/json
 
 {
-  "username": "admin",
   "password": "your-password"
 }
 ```
+
+The password is verified against the SHA-512 crypt hash configured in `Agent__Auth__PasswordHash`.
 
 ## Security
 
@@ -491,8 +492,8 @@ Content-Type: application/json
 
 ### Web UI login fails
 
-1. Verify username and password are set correctly
-2. Check for rate limiting lockout
+1. Verify password hash is set correctly (generate with `openssl passwd -6 "your-password"`)
+2. Check for rate limiting lockout (try again after the lockout period)
 3. Ensure JWT secret is configured
 4. Clear browser cookies and try again
 
@@ -530,13 +531,12 @@ Example Agent output:
   ╚██████╔╝╚██████╗   ██║   ╚██████╔╝██║     ╚██████╔╝██║  ██║   ██║      ██║
    ╚═════╝  ╚═════╝   ╚═╝    ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═╝
 
-  Agent v0.9.30
+  Agent v0.9.44
   ─────────────────────────────────────────────────────────────────────────
   GatewayUrl       : wss://gateway.example.com/tunnel
   ApiKey           : my****ey
   JwtSecret        : se****et
-  Username         : admin
-  Password         : pa****rd
+  PasswordHash     : $6****sh
   Environment      : Production
   Container UID:GID: 1000:1000
 ```
