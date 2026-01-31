@@ -82,6 +82,7 @@ app.UseWebSockets();
 
 // Landing page middleware - serve the landing page when accessing the Gateway's own FQDN.
 // This runs BEFORE request routing so tunnel requests don't hit this path.
+// Handles ALL paths on the Gateway FQDN to prevent "no mapping" warnings.
 app.Use(async (context, next) =>
 {
     var options = context.RequestServices.GetRequiredService<IOptions<GatewayOptions>>().Value;
@@ -93,16 +94,24 @@ app.Use(async (context, next) =>
         ? options.GatewayFqdn
         : state.GatewayFqdn;
 
-    // Only serve landing page if:
-    // 1. GatewayFqdn is known (from config or Agent sync)
-    // 2. Request host matches the Gateway's FQDN
-    // 3. Request path is the root "/"
+    // Handle requests to the Gateway's own FQDN.
+    // Skip /tunnel (WebSocket), /health, and /test-* paths - those are Gateway endpoints.
     if (!string.IsNullOrEmpty(gatewayFqdn) &&
         context.Request.Host.Host.Equals(gatewayFqdn, StringComparison.OrdinalIgnoreCase) &&
-        context.Request.Path == "/")
+        !context.Request.Path.StartsWithSegments("/tunnel") &&
+        !context.Request.Path.StartsWithSegments("/health") &&
+        !context.Request.Path.StartsWithSegments("/test-"))
     {
-        context.Response.ContentType = "text/html; charset=utf-8";
-        await context.Response.WriteAsync(state.LandingPageHtml);
+        if (context.Request.Path == "/" || context.Request.Path == "")
+        {
+            context.Response.ContentType = "text/html; charset=utf-8";
+            await context.Response.WriteAsync(state.LandingPageHtml);
+        }
+        else
+        {
+            // Redirect other paths (like /favicon.ico) to root
+            context.Response.Redirect("/", permanent: false);
+        }
         return;
     }
 

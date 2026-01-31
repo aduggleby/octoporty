@@ -11,14 +11,17 @@ Address the user as **Mr. Octoporty**.
 **NEVER use SSH with personal key files from ~/.ssh/ to access ANY servers.**
 
 - **FORBIDDEN:** `ssh -i ~/.ssh/id_* ...` or any SSH command using personal keys
-- **FORBIDDEN:** Accessing any server outside the designated Claude project
+- **FORBIDDEN:** Accessing any server outside the designated test VMs
 
-**ONLY access allowed:**
-- Use `hcloud` CLI to manage VMs in the **"claude" Hetzner project** only
-- The only VM you may work with is **"claude-octoporty"** in that project
-- Always use hcloud commands, never direct SSH with personal keys
+**ALLOWED - Test VMs Only:**
+- The VMs documented in `VMTESTING.md` can be accessed autonomously for testing
+- Use the SSH key at `.keys/octoporty_deploy` for these VMs only
+- See `VMTESTING.md` for VM IPs, credentials, and deployment instructions
 
-If you need to test deployments or run commands on a VM, ask the user to do it or use hcloud SSH which manages its own keys.
+**Test Deployment Workflow:**
+1. Run `ando release` to build and push to GHCR (production registry)
+2. SSH to VMs and run update scripts: `curl -fsSL https://octoporty.com/update-gateway.sh | bash`
+3. **Note:** `ando -p publish` does NOT deploy to test VMs - it only pushes to GHCR and deploys the website
 
 ## Repository
 
@@ -262,11 +265,13 @@ When adding ANY new UI feature:
 ## Configuration
 
 Environment variables (see `.env.example`):
-- `Agent__GatewayUrl` - WebSocket URL to Gateway
+- `Agent__GatewayFqdn` - Gateway FQDN (e.g., "gateway.example.com") - **primary config, derives WebSocket URL**
+- `Agent__GatewayUrl` - WebSocket URL to Gateway (optional, overrides derived URL from GatewayFqdn)
 - `Agent__ApiKey` / `Gateway__ApiKey` - Shared secret
 - `Agent__JwtSecret` - JWT signing (min 32 chars)
 - `Agent__Auth__Username/Password` - Web UI credentials
 - `Gateway__CaddyAdminUrl` - Caddy Admin API endpoint
+- `Gateway__GatewayFqdn` - Optional, Gateway's own FQDN for landing page (auto-derived from Agent if not set)
 
 ## ANDO Build System
 
