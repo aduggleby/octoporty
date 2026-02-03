@@ -17,6 +17,7 @@ import { DashboardPage } from './pages/Dashboard'
 import { MappingsPage } from './pages/Mappings'
 import { MappingDetailPage } from './pages/MappingDetail'
 import { GatewayPage } from './pages/Gateway'
+import { CaddyConfigPage } from './pages/CaddyConfig'
 import { SettingsPage } from './pages/Settings'
 import { api } from './api/client'
 import type { ReactNode } from 'react'
@@ -98,6 +99,17 @@ export function App() {
               <ProtectedRoute>
                 <Layout>
                   <GatewayPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/gateway/caddy-config"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CaddyConfigPage />
                 </Layout>
               </ProtectedRoute>
             }

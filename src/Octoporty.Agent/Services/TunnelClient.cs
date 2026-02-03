@@ -38,6 +38,7 @@ public class TunnelClient : BackgroundService
     private TaskCompletionSource<ConfigAckMessage>? _pendingConfigAck;
     private TaskCompletionSource<UpdateResponseMessage>? _pendingUpdateResponse;
     private TaskCompletionSource<GetLogsResponseMessage>? _pendingLogsResponse;
+    private TaskCompletionSource<GetCaddyConfigResponseMessage>? _pendingCaddyConfigResponse;
 
     private static readonly string AgentVersion = typeof(TunnelClient).Assembly
         .GetName().Version?.ToString(3) ?? "0.0.0";
@@ -322,9 +323,11 @@ public class TunnelClient : BackgroundService
     {
         if (State != TunnelClientState.Connected)
         {
-            _logger.LogWarning("Cannot resync configuration - not connected");
+            _logger.LogWarning("Cannot resync configuration - not connected (state: {State})", State);
             return;
         }
+
+        _logger.LogDebug("Starting configuration resync...");
 
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<OctoportyDbContext>();
@@ -344,6 +347,8 @@ public class TunnelClient : BackgroundService
             .ToArrayAsync(ct);
 
         var configHash = ComputeConfigHash(mappings);
+        _logger.LogDebug("Loaded {Count} enabled mappings from database, hash: {Hash}",
+            mappings.Length, configHash[..8]);
 
         // Get landing page and determine if it needs syncing
         var (landingPageHtml, landingPageHash) = await _landingPageService.GetLandingPageAsync();
@@ -351,7 +356,8 @@ public class TunnelClient : BackgroundService
 
         if (needsLandingPageSync)
         {
-            _logger.LogInformation("Landing page hash differs during resync, including HTML");
+            _logger.LogInformation("Landing page hash differs during resync (local: {LocalHash}, gateway: {GatewayHash}), including HTML",
+                landingPageHash[..8], _gatewayLandingPageHash?[..8] ?? "none");
         }
 
         var syncMessage = new ConfigSyncMessage
@@ -363,22 +369,26 @@ public class TunnelClient : BackgroundService
             GatewayFqdn = _options.GatewayFqdn
         };
 
-        _logger.LogDebug("Resyncing configuration with {Count} mappings, hash {Hash}",
+        _logger.LogInformation("Resyncing configuration with {Count} mappings, hash {Hash}",
             mappings.Length, configHash[..8]);
 
         // Set up the pending ack before sending
         _pendingConfigAck = new TaskCompletionSource<ConfigAckMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        // Send through the outbound channel (will be picked up by SendLoopAsync)
-        await _outboundChannel.Writer.WriteAsync(syncMessage, ct);
+        // Send through the outbound channel (will be picked up by SendLoopAsync).
+        // Use a fire-and-forget approach - don't pass the HTTP request's cancellation token
+        // to avoid cancelling the WebSocket write if the HTTP request ends.
+        _logger.LogDebug("Queuing ConfigSyncMessage to outbound channel");
+        await _outboundChannel.Writer.WriteAsync(syncMessage, CancellationToken.None);
+        _logger.LogDebug("ConfigSyncMessage queued, waiting for ack...");
 
-        // Wait for the ack with timeout
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+        // Wait for the ack with timeout.
+        // Use a longer timeout (60s) since Caddy route configuration can take time.
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 
         try
         {
-            var ackMessage = await _pendingConfigAck.Task.WaitAsync(linkedCts.Token);
+            var ackMessage = await _pendingConfigAck.Task.WaitAsync(timeoutCts.Token);
 
             if (ackMessage.Success)
             {
@@ -386,11 +396,13 @@ public class TunnelClient : BackgroundService
             }
             else
             {
+                _logger.LogError("Config resync failed with error from Gateway: {Error}", ackMessage.Error);
                 throw new InvalidOperationException($"Config resync failed: {ackMessage.Error}");
             }
         }
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
         {
+            _logger.LogError("Timeout waiting for ConfigAckMessage during resync (60s elapsed)");
             throw new TimeoutException("Timeout waiting for ConfigAckMessage during resync");
         }
         finally
@@ -517,6 +529,11 @@ public class TunnelClient : BackgroundService
             case GetLogsResponseMessage logsResponse:
                 _logger.LogDebug("GetLogsResponse received: {Count} logs", logsResponse.Logs.Length);
                 _pendingLogsResponse?.TrySetResult(logsResponse);
+                break;
+
+            case GetCaddyConfigResponseMessage caddyConfigResponse:
+                _logger.LogDebug("GetCaddyConfigResponse received: Success={Success}", caddyConfigResponse.Success);
+                _pendingCaddyConfigResponse?.TrySetResult(caddyConfigResponse);
                 break;
 
             case DisconnectMessage disconnect:
@@ -724,6 +741,50 @@ public class TunnelClient : BackgroundService
         finally
         {
             _pendingLogsResponse = null;
+        }
+    }
+
+    /// <summary>
+    /// Requests the current Caddy configuration from the Gateway.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The Caddy configuration response from the Gateway.</returns>
+    public async Task<GetCaddyConfigResponseMessage> GetCaddyConfigAsync(CancellationToken ct = default)
+    {
+        if (State != TunnelClientState.Connected)
+        {
+            throw new InvalidOperationException("Cannot request Caddy config - not connected to Gateway");
+        }
+
+        _logger.LogDebug("Requesting Caddy configuration from Gateway");
+
+        // Set up the pending response before sending
+        _pendingCaddyConfigResponse = new TaskCompletionSource<GetCaddyConfigResponseMessage>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var request = new GetCaddyConfigRequestMessage
+        {
+            RequestId = Guid.NewGuid().ToString("N")[..8]
+        };
+
+        // Send through the outbound channel
+        await _outboundChannel.Writer.WriteAsync(request, ct);
+
+        // Wait for response with timeout
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+
+        try
+        {
+            return await _pendingCaddyConfigResponse.Task.WaitAsync(linkedCts.Token);
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+        {
+            throw new TimeoutException("Timeout waiting for Caddy config response from Gateway");
+        }
+        finally
+        {
+            _pendingCaddyConfigResponse = null;
         }
     }
 

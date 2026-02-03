@@ -185,6 +185,20 @@ class ApiClient {
       method: 'DELETE',
     })
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Gateway - Caddy Config
+  // ─────────────────────────────────────────────────────────────────────────
+
+  async getCaddyConfig(): Promise<CaddyConfigResponse> {
+    return this.request<CaddyConfigResponse>('/gateway/caddy-config')
+  }
+}
+
+export interface CaddyConfigResponse {
+  success: boolean
+  error?: string
+  configJson?: string
 }
 
 export const api = new ApiClient()

@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { useToast } from '../hooks/useToast'
 import { useError } from '../components/ErrorBoundary'
@@ -218,7 +219,7 @@ export function GatewayPage() {
           <span className="panel-title">Gateway Information</span>
         </div>
         <div className="panel-body">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div>
               <p className="data-label">Gateway Version</p>
               <p className="data-value mt-1">
@@ -246,6 +247,18 @@ export function GatewayPage() {
                   ? formatUptime(status.gatewayUptime)
                   : 'Unknown'}
               </p>
+            </div>
+            <div>
+              <p className="data-label">Reverse Proxy</p>
+              <Link
+                to="/gateway/caddy-config"
+                className="data-value mt-1 text-cyan-base hover:text-cyan-light transition-colors flex items-center gap-1"
+              >
+                View Caddy Config
+                <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
+              </Link>
             </div>
           </div>
         </div>

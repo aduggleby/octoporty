@@ -5,6 +5,7 @@
 // Strips hop-by-hop headers and enforces 10MB max body size.
 
 using System.Diagnostics;
+using Microsoft.AspNetCore.StaticFiles;
 using Octoporty.Shared.Contracts;
 
 namespace Octoporty.Gateway.Services;
@@ -18,6 +19,9 @@ public sealed class RequestRoutingMiddleware
 
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
     private const int MaxBodySize = 10 * 1024 * 1024; // 10MB
+
+    // Used to infer Content-Type from file extension when upstream doesn't provide one
+    private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
 
     public RequestRoutingMiddleware(
         RequestDelegate next,
@@ -124,17 +128,57 @@ public sealed class RequestRoutingMiddleware
                 "TE", "Trailer", "Transfer-Encoding", "Upgrade"
             };
 
+            _logger.LogDebug("Response {RequestId} has {HeaderCount} headers", requestId, response.Headers.Count);
+
+            string? contentType = null;
+
             foreach (var (key, values) in response.Headers)
             {
                 if (hopByHopHeaders.Contains(key))
                     continue;
 
+                // Content-Type needs special handling in ASP.NET Core.
+                // Setting it via Headers[] collection may not work correctly.
+                if (string.Equals(key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                {
+                    contentType = values.FirstOrDefault();
+                    _logger.LogDebug("Response {RequestId} Content-Type from upstream: '{ContentType}'", requestId, contentType ?? "(null)");
+                    continue;
+                }
+
+                // Content-Length is automatically handled by ASP.NET Core based on body size
+                if (string.Equals(key, "Content-Length", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 context.Response.Headers[key] = values.Select(v => v ?? "").ToArray();
+            }
+
+            // Set Content-Type, inferring from file extension if upstream didn't provide one.
+            // This is critical for JavaScript modules which browsers reject without proper MIME type.
+            if (!string.IsNullOrEmpty(contentType))
+            {
+                context.Response.ContentType = contentType;
+                _logger.LogDebug("Response {RequestId} Content-Type set to: {ContentType}", requestId, contentType);
+            }
+            else
+            {
+                // Try to infer Content-Type from the request path
+                var path = context.Request.Path.Value ?? "";
+                if (ContentTypeProvider.TryGetContentType(path, out var inferredContentType))
+                {
+                    context.Response.ContentType = inferredContentType;
+                    _logger.LogDebug("Response {RequestId} Content-Type inferred from path: {ContentType}", requestId, inferredContentType);
+                }
+                else
+                {
+                    _logger.LogWarning("Response {RequestId} has no Content-Type and could not infer from path: {Path}", requestId, path);
+                }
             }
 
             // Write body
             if (response.Body != null && response.Body.Length > 0)
             {
+                _logger.LogDebug("Response {RequestId} writing body of {Length} bytes", requestId, response.Body.Length);
                 await context.Response.Body.WriteAsync(response.Body, context.RequestAborted);
             }
 

@@ -12,4 +12,9 @@ public interface ICaddyAdminClient
     Task EnsureRouteExistsAsync(PortMappingDto mapping, CancellationToken ct);
     Task RemoveRouteAsync(Guid mappingId, CancellationToken ct);
     Task RemoveStaleRoutesAsync(HashSet<Guid> activeIds, CancellationToken ct);
+
+    /// <summary>
+    /// Gets the current Caddy configuration as JSON.
+    /// </summary>
+    Task<string> GetConfigJsonAsync(CancellationToken ct);
 }

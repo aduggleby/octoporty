@@ -189,6 +189,10 @@ public class TunnelWebSocketHandler
                 await HandleGetLogsRequestAsync(connection, getLogsRequest, ct);
                 break;
 
+            case GetCaddyConfigRequestMessage getCaddyConfigRequest:
+                await HandleGetCaddyConfigRequestAsync(connection, getCaddyConfigRequest, ct);
+                break;
+
             default:
                 _logger.LogWarning("Unhandled message type: {MessageType}", message.GetType().Name);
                 break;
@@ -206,20 +210,42 @@ public class TunnelWebSocketHandler
         _logger.LogInformation("Received config sync with {Count} mappings (hash: {Hash})",
             configSync.Mappings.Length, configSync.ConfigHash[..8]);
 
+        // Use a separate cancellation token for Caddy operations.
+        // The passed ct may be cancelled by the HTTP request ending, but we want
+        // to complete the Caddy update even if the Agent disconnects briefly.
+        using var caddyCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+
         try
         {
             // Update mappings in connection
+            _logger.LogDebug("Updating mappings in connection object");
             connection.UpdateMappings(configSync.Mappings);
 
             // Configure Caddy routes
-            foreach (var mapping in configSync.Mappings.Where(m => m.IsEnabled))
+            var enabledMappings = configSync.Mappings.Where(m => m.IsEnabled).ToList();
+            _logger.LogDebug("Configuring {Count} enabled Caddy routes", enabledMappings.Count);
+
+            foreach (var mapping in enabledMappings)
             {
-                await _caddyClient.EnsureRouteExistsAsync(mapping, ct);
+                _logger.LogDebug("Ensuring Caddy route for mapping {Id} ({Domain})",
+                    mapping.Id, mapping.ExternalDomain);
+
+                try
+                {
+                    await _caddyClient.EnsureRouteExistsAsync(mapping, caddyCts.Token);
+                    _logger.LogDebug("Caddy route configured for {Domain}", mapping.ExternalDomain);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to configure Caddy route for {Domain}", mapping.ExternalDomain);
+                    throw;
+                }
             }
 
             // Remove routes for disabled mappings
-            var enabledIds = configSync.Mappings.Where(m => m.IsEnabled).Select(m => m.Id).ToHashSet();
-            await _caddyClient.RemoveStaleRoutesAsync(enabledIds, ct);
+            var enabledIds = enabledMappings.Select(m => m.Id).ToHashSet();
+            _logger.LogDebug("Removing stale Caddy routes (keeping {Count} routes)", enabledIds.Count);
+            await _caddyClient.RemoveStaleRoutesAsync(enabledIds, caddyCts.Token);
 
             // Update landing page if HTML was provided.
             // Agent only sends HTML when the hash differs, saving bandwidth.
@@ -238,6 +264,7 @@ public class TunnelWebSocketHandler
                 _logger.LogInformation("Gateway FQDN set from Agent: {Fqdn}", configSync.GatewayFqdn);
             }
 
+            _logger.LogDebug("Sending ConfigAckMessage with Success=true");
             await connection.SendAsync(new ConfigAckMessage
             {
                 Success = true,
@@ -246,15 +273,38 @@ public class TunnelWebSocketHandler
 
             _logger.LogInformation("Config sync completed successfully");
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // The connection's cancellation token was triggered (Agent disconnected).
+            // Log but don't send response since connection is gone.
+            _logger.LogWarning("Config sync cancelled - connection closed during processing");
+        }
+        catch (OperationCanceledException) when (caddyCts.IsCancellationRequested)
+        {
+            _logger.LogError("Config sync failed - Caddy operation timed out after 60 seconds");
+            await TrySendConfigAckAsync(connection, configSync.ConfigHash, "Caddy operation timed out", ct);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Config sync failed");
+            _logger.LogError(ex, "Config sync failed: {Message}", ex.Message);
+            await TrySendConfigAckAsync(connection, configSync.ConfigHash, ex.Message, ct);
+        }
+    }
+
+    private async Task TrySendConfigAckAsync(TunnelConnection connection, string configHash, string error, CancellationToken ct)
+    {
+        try
+        {
             await connection.SendAsync(new ConfigAckMessage
             {
                 Success = false,
-                Error = ex.Message,
-                ConfigHash = configSync.ConfigHash
+                Error = error,
+                ConfigHash = configHash
             }, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send ConfigAckMessage error response");
         }
     }
 
@@ -313,6 +363,39 @@ public class TunnelWebSocketHandler
             }).ToArray(),
             HasMore = hasMore
         };
+
+        await connection.SendAsync(response, ct);
+    }
+
+    private async Task HandleGetCaddyConfigRequestAsync(TunnelConnection connection, GetCaddyConfigRequestMessage request, CancellationToken ct)
+    {
+        _logger.LogDebug("Received Caddy config request: {RequestId}", request.RequestId);
+
+        GetCaddyConfigResponseMessage response;
+        try
+        {
+            var configJson = await _caddyClient.GetConfigJsonAsync(ct);
+
+            response = new GetCaddyConfigResponseMessage
+            {
+                RequestId = request.RequestId,
+                Success = true,
+                ConfigJson = configJson
+            };
+
+            _logger.LogDebug("Returning Caddy config ({Length} bytes)", configJson.Length);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get Caddy config for request {RequestId}", request.RequestId);
+
+            response = new GetCaddyConfigResponseMessage
+            {
+                RequestId = request.RequestId,
+                Success = false,
+                Error = ex.Message
+            };
+        }
 
         await connection.SendAsync(response, ct);
     }

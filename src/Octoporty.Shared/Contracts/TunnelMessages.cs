@@ -24,6 +24,8 @@ namespace Octoporty.Shared.Contracts;
 [Union(14, typeof(GatewayLogMessage))]
 [Union(15, typeof(GetLogsRequestMessage))]
 [Union(16, typeof(GetLogsResponseMessage))]
+[Union(17, typeof(GetCaddyConfigRequestMessage))]
+[Union(18, typeof(GetCaddyConfigResponseMessage))]
 public abstract class TunnelMessage
 {
     [IgnoreMember]
@@ -436,4 +438,55 @@ public sealed class GatewayLogDto
 
     [Key(3)]
     public required string Message { get; init; }
+}
+
+/// <summary>
+/// Request from Agent to get the current Caddy configuration from the Gateway.
+/// Used for debugging and monitoring the reverse proxy state.
+/// </summary>
+[MessagePackObject]
+public sealed class GetCaddyConfigRequestMessage : TunnelMessage
+{
+    [IgnoreMember]
+    public override MessageType Type => MessageType.GetCaddyConfigRequest;
+
+    /// <summary>
+    /// Unique request ID for correlation.
+    /// </summary>
+    [Key(0)]
+    public required string RequestId { get; init; }
+}
+
+/// <summary>
+/// Response containing the current Caddy configuration.
+/// </summary>
+[MessagePackObject]
+public sealed class GetCaddyConfigResponseMessage : TunnelMessage
+{
+    [IgnoreMember]
+    public override MessageType Type => MessageType.GetCaddyConfigResponse;
+
+    /// <summary>
+    /// Request ID for correlation.
+    /// </summary>
+    [Key(0)]
+    public required string RequestId { get; init; }
+
+    /// <summary>
+    /// Whether the request was successful.
+    /// </summary>
+    [Key(1)]
+    public required bool Success { get; init; }
+
+    /// <summary>
+    /// Error message if the request failed.
+    /// </summary>
+    [Key(2)]
+    public string? Error { get; init; }
+
+    /// <summary>
+    /// The Caddy configuration as JSON string.
+    /// </summary>
+    [Key(3)]
+    public string? ConfigJson { get; init; }
 }

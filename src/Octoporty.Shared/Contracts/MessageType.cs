@@ -22,5 +22,7 @@ public enum MessageType : byte
     GatewayLog = 14,
     GetLogsRequest = 15,
     GetLogsResponse = 16,
+    GetCaddyConfigRequest = 17,
+    GetCaddyConfigResponse = 18,
     Error = 255
 }

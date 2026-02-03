@@ -123,7 +123,7 @@ public class RequestForwarder
         return httpRequest;
     }
 
-    private static async Task<ResponseMessage> CreateResponseMessageAsync(
+    private async Task<ResponseMessage> CreateResponseMessageAsync(
         string requestId,
         HttpResponseMessage httpResponse,
         CancellationToken ct)
@@ -138,9 +138,18 @@ public class RequestForwarder
         foreach (var (key, values) in httpResponse.Content.Headers)
         {
             headers[key] = values.ToArray();
+            // Log Content-Type specifically for debugging
+            if (string.Equals(key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogDebug("Request {RequestId} response Content-Type from upstream: {ContentType}",
+                    requestId, string.Join(", ", values));
+            }
         }
 
         var body = await httpResponse.Content.ReadAsByteArrayAsync(ct);
+
+        _logger.LogDebug("Request {RequestId} response has {HeaderCount} headers, {BodyLength} bytes",
+            requestId, headers.Count, body.Length);
 
         return new ResponseMessage
         {
@@ -203,6 +212,19 @@ public class RequestForwarder
             foreach (var (key, values) in httpResponse.Content.Headers)
             {
                 headers[key] = values.ToArray();
+                // Log Content-Type specifically for debugging
+                if (string.Equals(key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug("Request {RequestId} streaming response Content-Type from upstream: {ContentType}",
+                        request.RequestId, string.Join(", ", values));
+                }
+            }
+
+            // Log if Content-Type is missing
+            if (!headers.ContainsKey("Content-Type"))
+            {
+                _logger.LogWarning("Request {RequestId} streaming response has no Content-Type header for path: {Path}",
+                    request.RequestId, request.Path);
             }
 
             // Check content length to determine if we should stream

@@ -181,6 +181,21 @@ public sealed class CaddyAdminClient : ICaddyAdminClient
         }
     }
 
+    public async Task<string> GetConfigJsonAsync(CancellationToken ct)
+    {
+        try
+        {
+            var response = await _http.GetAsync("/config/", ct);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get Caddy configuration");
+            throw;
+        }
+    }
+
     private static string GetRouteId(Guid mappingId) => $"octoporty-{mappingId:N}";
 }
 
