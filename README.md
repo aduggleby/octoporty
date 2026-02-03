@@ -349,6 +349,7 @@ The Agent includes an embedded React web application for managing port mappings.
 - **Port Mappings** - Create, edit, and delete domain-to-service mappings
 - **Settings** - Customize the Gateway landing page with your own HTML and branding
 - **Gateway Logs** - Real-time streaming of Gateway logs with historical log retrieval and infinite scroll
+- **Caddy Configuration** - View the current Caddy reverse proxy configuration for debugging and monitoring
 - **Connection Logs** - View connection history and status
 - **Request Logs** - Audit trail of all tunneled requests
 
@@ -436,6 +437,12 @@ dotnet test --filter "FullyQualifiedName~ComprehensiveUi"
 | GET | `/api/v1/settings/landing-page` | Get current landing page HTML and hash |
 | PUT | `/api/v1/settings/landing-page` | Update landing page HTML (max 1MB) |
 | DELETE | `/api/v1/settings/landing-page` | Reset to default Octoporty landing page |
+
+### Gateway API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/gateway/caddy-config` | Get current Caddy reverse proxy configuration from the Gateway |
 
 ### Authentication
 

@@ -30,6 +30,15 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.45
+
+**2026-02-03**
+
+- **Caddy Configuration Viewer** - New page in the Agent web UI to inspect the current Caddy reverse proxy configuration from the Gateway. Access it from the Gateway page or navigate to `/gateway/caddy-config`. Useful for debugging routing rules and verifying that port mappings are correctly configured in the reverse proxy
+- Internal improvements
+
+---
+
 ## 0.9.44
 
 **2026-01-31**
