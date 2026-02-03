@@ -18,6 +18,7 @@ import { MappingsPage } from './pages/Mappings'
 import { MappingDetailPage } from './pages/MappingDetail'
 import { GatewayPage } from './pages/Gateway'
 import { CaddyConfigPage } from './pages/CaddyConfig'
+import { RequestInspectorPage } from './pages/RequestInspector'
 import { SettingsPage } from './pages/Settings'
 import { api } from './api/client'
 import type { ReactNode } from 'react'
@@ -110,6 +111,17 @@ export function App() {
               <ProtectedRoute>
                 <Layout>
                   <CaddyConfigPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/gateway/inspector"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RequestInspectorPage />
                 </Layout>
               </ProtectedRoute>
             }

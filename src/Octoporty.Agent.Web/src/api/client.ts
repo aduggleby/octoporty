@@ -14,6 +14,7 @@ import type {
   GetLogsResponse,
   LandingPageResponse,
   UpdateLandingPageResponse,
+  DiagnoseResponse,
 } from '../types'
 
 const API_BASE = '/api/v1'
@@ -192,6 +193,17 @@ class ApiClient {
 
   async getCaddyConfig(): Promise<CaddyConfigResponse> {
     return this.request<CaddyConfigResponse>('/gateway/caddy-config')
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Diagnostics
+  // ─────────────────────────────────────────────────────────────────────────
+
+  async diagnoseUrl(url: string, maxBodyBytes: number = 131072): Promise<DiagnoseResponse> {
+    return this.request<DiagnoseResponse>('/test/diagnose', {
+      method: 'POST',
+      body: JSON.stringify({ url, maxBodyBytes }),
+    })
   }
 }
 

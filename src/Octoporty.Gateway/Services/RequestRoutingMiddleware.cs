@@ -69,6 +69,14 @@ public sealed class RequestRoutingMiddleware
     private async Task ForwardRequestAsync(HttpContext context, Guid mappingId)
     {
         var requestId = Activity.Current?.Id ?? Guid.NewGuid().ToString("N");
+        if (context.Request.Headers.TryGetValue("X-Octoporty-Request-Id", out var requestIdHeader))
+        {
+            var headerId = requestIdHeader.FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(headerId) && headerId.Length <= 64)
+            {
+                requestId = headerId;
+            }
+        }
         var stopwatch = Stopwatch.StartNew();
 
         try
@@ -109,82 +117,102 @@ public sealed class RequestRoutingMiddleware
             _logger.LogDebug("Forwarding request {RequestId}: {Method} {Path} (mapping: {MappingId})",
                 requestId, request.Method, request.Path, mappingId);
 
-            // Forward through tunnel
-            var response = await _connectionManager.ForwardRequestAsync(request, DefaultTimeout, context.RequestAborted);
+            var gotAnyResponse = false;
+            var headersApplied = false;
 
-            if (response == null)
+            await foreach (var streamingResponse in _connectionManager.ForwardStreamingRequestAsync(
+                request,
+                DefaultTimeout,
+                context.RequestAborted))
+            {
+                gotAnyResponse = true;
+
+                if (streamingResponse.InitialResponse != null && !headersApplied)
+                {
+                    var response = streamingResponse.InitialResponse;
+
+                    // Write response
+                    context.Response.StatusCode = response.StatusCode;
+
+                    // Copy headers (excluding hop-by-hop headers)
+                    var hopByHopHeaders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        "Connection", "Keep-Alive", "Proxy-Authenticate", "Proxy-Authorization",
+                        "TE", "Trailer", "Transfer-Encoding", "Upgrade"
+                    };
+
+                    _logger.LogDebug("Response {RequestId} has {HeaderCount} headers", requestId, response.Headers.Count);
+
+                    string? contentType = null;
+
+                    foreach (var (key, values) in response.Headers)
+                    {
+                        if (hopByHopHeaders.Contains(key))
+                            continue;
+
+                        // Content-Type needs special handling in ASP.NET Core.
+                        // Setting it via Headers[] collection may not work correctly.
+                        if (string.Equals(key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                        {
+                            contentType = values.FirstOrDefault();
+                            _logger.LogDebug("Response {RequestId} Content-Type from upstream: '{ContentType}'", requestId, contentType ?? "(null)");
+                            continue;
+                        }
+
+                        // Content-Length is automatically handled by ASP.NET Core based on body size
+                        if (string.Equals(key, "Content-Length", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        context.Response.Headers[key] = values.Select(v => v ?? "").ToArray();
+                    }
+
+                    // Set Content-Type, inferring from file extension if upstream didn't provide one.
+                    // This is critical for JavaScript modules which browsers reject without proper MIME type.
+                    if (!string.IsNullOrEmpty(contentType))
+                    {
+                        context.Response.ContentType = contentType;
+                        _logger.LogDebug("Response {RequestId} Content-Type set to: {ContentType}", requestId, contentType);
+                    }
+                    else
+                    {
+                        // Try to infer Content-Type from the request path
+                        var path = context.Request.Path.Value ?? "";
+                        if (ContentTypeProvider.TryGetContentType(path, out var inferredContentType))
+                        {
+                            context.Response.ContentType = inferredContentType;
+                            _logger.LogDebug("Response {RequestId} Content-Type inferred from path: {ContentType}", requestId, inferredContentType);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Response {RequestId} has no Content-Type and could not infer from path: {Path}", requestId, path);
+                        }
+                    }
+
+                    headersApplied = true;
+
+                    // Write body if present in initial response
+                    if (response.Body != null && response.Body.Length > 0)
+                    {
+                        _logger.LogDebug("Response {RequestId} writing initial body of {Length} bytes", requestId, response.Body.Length);
+                        await context.Response.Body.WriteAsync(response.Body, context.RequestAborted);
+                    }
+                }
+
+                if (streamingResponse.Chunk != null && streamingResponse.Chunk.Data.Length > 0)
+                {
+                    await context.Response.Body.WriteAsync(streamingResponse.Chunk.Data, context.RequestAborted);
+                }
+            }
+
+            if (!gotAnyResponse)
             {
                 await HandleTunnelUnavailable(context, mappingId);
                 return;
             }
 
-            // Write response
-            context.Response.StatusCode = response.StatusCode;
-
-            // Copy headers (excluding hop-by-hop headers)
-            var hopByHopHeaders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "Connection", "Keep-Alive", "Proxy-Authenticate", "Proxy-Authorization",
-                "TE", "Trailer", "Transfer-Encoding", "Upgrade"
-            };
-
-            _logger.LogDebug("Response {RequestId} has {HeaderCount} headers", requestId, response.Headers.Count);
-
-            string? contentType = null;
-
-            foreach (var (key, values) in response.Headers)
-            {
-                if (hopByHopHeaders.Contains(key))
-                    continue;
-
-                // Content-Type needs special handling in ASP.NET Core.
-                // Setting it via Headers[] collection may not work correctly.
-                if (string.Equals(key, "Content-Type", StringComparison.OrdinalIgnoreCase))
-                {
-                    contentType = values.FirstOrDefault();
-                    _logger.LogDebug("Response {RequestId} Content-Type from upstream: '{ContentType}'", requestId, contentType ?? "(null)");
-                    continue;
-                }
-
-                // Content-Length is automatically handled by ASP.NET Core based on body size
-                if (string.Equals(key, "Content-Length", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                context.Response.Headers[key] = values.Select(v => v ?? "").ToArray();
-            }
-
-            // Set Content-Type, inferring from file extension if upstream didn't provide one.
-            // This is critical for JavaScript modules which browsers reject without proper MIME type.
-            if (!string.IsNullOrEmpty(contentType))
-            {
-                context.Response.ContentType = contentType;
-                _logger.LogDebug("Response {RequestId} Content-Type set to: {ContentType}", requestId, contentType);
-            }
-            else
-            {
-                // Try to infer Content-Type from the request path
-                var path = context.Request.Path.Value ?? "";
-                if (ContentTypeProvider.TryGetContentType(path, out var inferredContentType))
-                {
-                    context.Response.ContentType = inferredContentType;
-                    _logger.LogDebug("Response {RequestId} Content-Type inferred from path: {ContentType}", requestId, inferredContentType);
-                }
-                else
-                {
-                    _logger.LogWarning("Response {RequestId} has no Content-Type and could not infer from path: {Path}", requestId, path);
-                }
-            }
-
-            // Write body
-            if (response.Body != null && response.Body.Length > 0)
-            {
-                _logger.LogDebug("Response {RequestId} writing body of {Length} bytes", requestId, response.Body.Length);
-                await context.Response.Body.WriteAsync(response.Body, context.RequestAborted);
-            }
-
             stopwatch.Stop();
             _logger.LogInformation("Request {RequestId} completed: {StatusCode} ({Duration}ms)",
-                requestId, response.StatusCode, stopwatch.ElapsedMilliseconds);
+                requestId, context.Response.StatusCode, stopwatch.ElapsedMilliseconds);
         }
         catch (OperationCanceledException)
         {

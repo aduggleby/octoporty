@@ -104,6 +104,35 @@ export interface GatewayLogItem {
   message: string
 }
 
+// Diagnostics types
+export interface DiagnoseResponse {
+  success: boolean
+  error?: string
+  requestId: string
+  url: string
+  mapping?: {
+    id: string
+    externalDomain: string
+    internalTarget: string
+  }
+  gateway?: ProbeResult
+  agent?: ProbeResult
+  gatewayLogs: GatewayLogItem[]
+}
+
+export interface ProbeResult {
+  success: boolean
+  error?: string
+  statusCode?: number
+  durationMs?: number
+  headers?: Record<string, string[]>
+  contentType?: string
+  bodySize?: number
+  bodyTruncated?: boolean
+  bodyText?: string
+  bodyBase64?: string
+}
+
 // Toast/Notification types
 export type ToastType = 'success' | 'error' | 'warning' | 'info'
 
