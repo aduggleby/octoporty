@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.46
+
+**2026-02-03**
+
+- **Request Inspector** - New debugging tool to compare Gateway vs Agent responses for any URL. Shows status codes, headers, response bodies, and timing differences to help diagnose tunnel routing issues
+
+---
+
 ## 0.9.45
 
 **2026-02-03**

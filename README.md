@@ -347,6 +347,7 @@ The Agent includes an embedded React web application for managing port mappings.
 
 - **Dashboard** - Overview of tunnel status and active mappings
 - **Port Mappings** - Create, edit, and delete domain-to-service mappings
+- **Request Inspector** - Debug tunnel routing by comparing Gateway vs Agent responses for any URL, with timing and header analysis
 - **Settings** - Customize the Gateway landing page with your own HTML and branding
 - **Gateway Logs** - Real-time streaming of Gateway logs with historical log retrieval and infinite scroll
 - **Caddy Configuration** - View the current Caddy reverse proxy configuration for debugging and monitoring
@@ -444,6 +445,12 @@ dotnet test --filter "FullyQualifiedName~ComprehensiveUi"
 |--------|----------|-------------|
 | GET | `/api/v1/gateway/caddy-config` | Get current Caddy reverse proxy configuration from the Gateway |
 
+### Diagnostics API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/test/diagnose` | Compare Gateway vs Agent responses for a URL to debug routing issues |
+
 ### Authentication
 
 The Agent Web UI uses JWT authentication with HttpOnly cookies. Login via:
@@ -492,10 +499,11 @@ The password is verified against the SHA-512 crypt hash configured in `Agent__Au
 
 ### Requests not reaching internal service
 
-1. Verify port mapping configuration
-2. Check internal service is running and accessible from Agent
-3. Review Agent logs for forwarding errors
-4. Ensure internal host is resolvable from Agent container
+1. Use the **Request Inspector** (under Gateway in the sidebar) to compare Gateway vs Agent responses
+2. Verify port mapping configuration
+3. Check internal service is running and accessible from Agent
+4. Review Agent logs for forwarding errors
+5. Ensure internal host is resolvable from Agent container
 
 ### Web UI login fails
 
