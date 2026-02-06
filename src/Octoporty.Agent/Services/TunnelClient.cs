@@ -233,6 +233,7 @@ public class TunnelClient : BackgroundService
             .Select(m => new PortMappingDto
             {
                 Id = m.Id,
+                Name = m.Description ?? m.ExternalDomain,
                 ExternalDomain = m.ExternalDomain,
                 InternalHost = m.InternalHost,
                 InternalPort = m.InternalPort,
@@ -337,6 +338,7 @@ public class TunnelClient : BackgroundService
             .Select(m => new PortMappingDto
             {
                 Id = m.Id,
+                Name = m.Description ?? m.ExternalDomain,
                 ExternalDomain = m.ExternalDomain,
                 InternalHost = m.InternalHost,
                 InternalPort = m.InternalPort,

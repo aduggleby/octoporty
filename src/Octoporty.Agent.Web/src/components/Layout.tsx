@@ -43,7 +43,7 @@ export function Layout({ children }: LayoutProps) {
     navigate('/login')
   }
 
-  const navItems = [
+  const navItems: Array<{ to: string; label: string; icon: ReactNode; end?: boolean }> = [
     {
       to: '/',
       label: 'Dashboard',
@@ -70,6 +70,8 @@ export function Layout({ children }: LayoutProps) {
     {
       to: '/gateway',
       label: 'Gateway',
+      // Use end: true to prevent this from matching /gateway/inspector
+      end: true,
       icon: (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
@@ -145,6 +147,7 @@ export function Layout({ children }: LayoutProps) {
             <NavLink
               key={item.to}
               to={item.to}
+              end={'end' in item ? item.end : undefined}
               className={({ isActive }) =>
                 clsx('sidebar-link', isActive && 'sidebar-link-active')
               }

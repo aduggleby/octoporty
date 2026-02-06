@@ -260,21 +260,24 @@ public sealed class PortMappingDto
     public required Guid Id { get; init; }
 
     [Key(1)]
-    public required string ExternalDomain { get; init; }
+    public required string Name { get; init; }
 
     [Key(2)]
-    public required string InternalHost { get; init; }
+    public required string ExternalDomain { get; init; }
 
     [Key(3)]
-    public required int InternalPort { get; init; }
+    public required string InternalHost { get; init; }
 
     [Key(4)]
-    public required bool InternalUseTls { get; init; }
+    public required int InternalPort { get; init; }
 
     [Key(5)]
-    public required bool AllowSelfSignedCerts { get; init; }
+    public required bool InternalUseTls { get; init; }
 
     [Key(6)]
+    public required bool AllowSelfSignedCerts { get; init; }
+
+    [Key(7)]
     public required bool IsEnabled { get; init; }
 }
 

@@ -12,6 +12,7 @@ public interface ITunnelConnectionManager
     ITunnelConnection? ActiveConnection { get; }
     bool HasActiveConnection { get; }
     PortMappingDto? GetMappingByHost(string host);
+    PortMappingDto? GetMappingById(Guid mappingId);
     Task<ResponseMessage?> ForwardRequestAsync(RequestMessage request, TimeSpan timeout, CancellationToken ct);
     IAsyncEnumerable<StreamingResponse> ForwardStreamingRequestAsync(RequestMessage request, TimeSpan timeout, CancellationToken ct);
 }
@@ -81,6 +82,15 @@ public sealed class TunnelConnectionManager : ITunnelConnectionManager
         return connection.Mappings.Values
             .FirstOrDefault(m => m.IsEnabled &&
                                  m.ExternalDomain.Equals(domain, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public PortMappingDto? GetMappingById(Guid mappingId)
+    {
+        var connection = ActiveConnection;
+        if (connection == null)
+            return null;
+
+        return connection.Mappings.TryGetValue(mappingId, out var mapping) ? mapping : null;
     }
 
     public async Task<ResponseMessage?> ForwardRequestAsync(RequestMessage request, TimeSpan timeout, CancellationToken ct)

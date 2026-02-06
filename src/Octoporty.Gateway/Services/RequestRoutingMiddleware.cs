@@ -46,12 +46,13 @@ public sealed class RequestRoutingMiddleware
         }
 
         // Check for Octoporty mapping header (set by Caddy)
+        PortMappingDto? mapping = null;
         if (!context.Request.Headers.TryGetValue("X-Octoporty-Mapping-Id", out var mappingIdHeader) ||
             !Guid.TryParse(mappingIdHeader.FirstOrDefault(), out var mappingId))
         {
             // Try to find mapping by host header
             var host = context.Request.Host.Value ?? "";
-            var mapping = _connectionManager.GetMappingByHost(host);
+            mapping = _connectionManager.GetMappingByHost(host);
 
             if (mapping == null)
             {
@@ -62,11 +63,15 @@ public sealed class RequestRoutingMiddleware
 
             mappingId = mapping.Id;
         }
+        else
+        {
+            mapping = _connectionManager.GetMappingById(mappingId);
+        }
 
-        await ForwardRequestAsync(context, mappingId);
+        await ForwardRequestAsync(context, mappingId, mapping);
     }
 
-    private async Task ForwardRequestAsync(HttpContext context, Guid mappingId)
+    private async Task ForwardRequestAsync(HttpContext context, Guid mappingId, PortMappingDto? mapping)
     {
         var requestId = Activity.Current?.Id ?? Guid.NewGuid().ToString("N");
         if (context.Request.Headers.TryGetValue("X-Octoporty-Request-Id", out var requestIdHeader))
@@ -78,6 +83,8 @@ public sealed class RequestRoutingMiddleware
             }
         }
         var stopwatch = Stopwatch.StartNew();
+        var mappingName = mapping?.Name ?? "(unknown)";
+        var mappingDomain = mapping?.ExternalDomain ?? "(unknown)";
 
         try
         {
@@ -184,7 +191,8 @@ public sealed class RequestRoutingMiddleware
                         }
                         else
                         {
-                            _logger.LogWarning("Response {RequestId} has no Content-Type and could not infer from path: {Path}", requestId, path);
+                            _logger.LogWarning("Response {RequestId} [{Host}] (mapping: {MappingName} - {MappingDomain}) has no Content-Type and could not infer from path: {Path}",
+                                requestId, context.Request.Host.Value, mappingName, mappingDomain, path);
                         }
                     }
 
@@ -211,8 +219,8 @@ public sealed class RequestRoutingMiddleware
             }
 
             stopwatch.Stop();
-            _logger.LogInformation("Request {RequestId} completed: {StatusCode} ({Duration}ms)",
-                requestId, context.Response.StatusCode, stopwatch.ElapsedMilliseconds);
+            _logger.LogInformation("Request {RequestId} [{Host}] (mapping: {MappingName} - {MappingDomain}) completed: {StatusCode} ({Duration}ms)",
+                requestId, context.Request.Host.Value, mappingName, mappingDomain, context.Response.StatusCode, stopwatch.ElapsedMilliseconds);
         }
         catch (OperationCanceledException)
         {
