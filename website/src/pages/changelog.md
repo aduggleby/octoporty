@@ -30,6 +30,16 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.47
+
+**2026-02-06**
+
+- Add mapping names to tunnel requests for easier identification in logs
+- Improve request logging with host, mapping name, and domain details
+- **Auto-Updater Installer** - New `install-updater.sh` script to add the Gateway auto-updater to existing installations. Run `curl -fsSL https://octoporty.com/install-updater.sh | sudo bash` on your Gateway server
+
+---
+
 ## 0.9.46
 
 **2026-02-03**

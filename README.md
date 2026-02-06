@@ -277,6 +277,16 @@ When you update the Agent to a newer version, it can detect that the Gateway is 
 5. The Gateway writes a signal file that the host watcher monitors
 6. Within 30 seconds, the Gateway is automatically pulled and restarted
 
+**Installing the Auto-Updater:**
+
+If your Gateway was installed before the auto-updater was included, you can add it to an existing installation:
+
+```bash
+curl -fsSL https://octoporty.com/install-updater.sh | sudo bash
+```
+
+This installs a systemd timer that checks for update signal files every 30 seconds. New Gateway installations include the auto-updater automatically.
+
 **Configuration:**
 
 | Variable | Description | Default |

@@ -104,6 +104,18 @@ volumes:
 
 ---
 
+## Gateway Auto-Updater
+
+If your Gateway was installed before the auto-updater feature, you can add it to an existing installation:
+
+```bash
+curl -fsSL https://octoporty.com/install-updater.sh | sudo bash
+```
+
+This installs a systemd timer that monitors for update signals from the Agent UI. Once installed, you can trigger Gateway updates directly from the Agent web interface.
+
+---
+
 ## Need Help?
 
 - [Documentation](/)
