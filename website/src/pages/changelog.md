@@ -30,6 +30,15 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.50
+
+**2026-02-11**
+
+- **Gateway Log Detail** - New page for inspecting individual Gateway log entries with search, level filtering (Debug/Info/Warning/Error), and full message payload display
+- Enhanced Gateway error logging for 404 and 502 responses now includes request method, path, host, mapping info, user agent, remote IP, and a response body preview for easier troubleshooting
+
+---
+
 ## 0.9.49
 
 **2026-02-11**

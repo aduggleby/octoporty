@@ -363,6 +363,7 @@ The Agent includes an embedded React web application for managing port mappings.
 - **Request Inspector** - Debug tunnel routing by comparing Gateway vs Agent responses for any URL, with timing and header analysis
 - **Settings** - Customize the Gateway landing page with your own HTML and branding
 - **Gateway Logs** - Real-time streaming of Gateway logs with historical log retrieval and infinite scroll
+- **Gateway Log Detail** - Detailed log inspection view with search, level filtering, and full message payload display for debugging tunnel issues
 - **Caddy Configuration** - View the current Caddy reverse proxy configuration for debugging and monitoring
 - **Connection Logs** - View connection history and status
 - **Request Logs** - Audit trail of all tunneled requests
@@ -559,7 +560,7 @@ Example Agent output:
   ╚██████╔╝╚██████╗   ██║   ╚██████╔╝██║     ╚██████╔╝██║  ██║   ██║      ██║
    ╚═════╝  ╚═════╝   ╚═╝    ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═╝
 
-  Agent v0.9.44
+  Agent v0.9.50
   ─────────────────────────────────────────────────────────────────────────
   GatewayUrl       : wss://gateway.example.com/tunnel
   ApiKey           : my****ey
