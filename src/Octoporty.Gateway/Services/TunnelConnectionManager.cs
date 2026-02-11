@@ -15,6 +15,10 @@ public interface ITunnelConnectionManager
     PortMappingDto? GetMappingById(Guid mappingId);
     Task<ResponseMessage?> ForwardRequestAsync(RequestMessage request, TimeSpan timeout, CancellationToken ct);
     IAsyncEnumerable<StreamingResponse> ForwardStreamingRequestAsync(RequestMessage request, TimeSpan timeout, CancellationToken ct);
+    Task<WebSocketOpenResultMessage?> OpenWebSocketAsync(WebSocketOpenMessage request, TimeSpan timeout, CancellationToken ct);
+    Task SendWebSocketFrameAsync(WebSocketFrameMessage frame, CancellationToken ct);
+    Task SendWebSocketCloseAsync(WebSocketCloseMessage close, CancellationToken ct);
+    IAsyncEnumerable<TunnelMessage> ReceiveWebSocketMessagesAsync(string sessionId, CancellationToken ct);
 }
 
 public sealed class TunnelConnectionManager : ITunnelConnectionManager
@@ -120,6 +124,62 @@ public sealed class TunnelConnectionManager : ITunnelConnectionManager
         await foreach (var response in connection.SendStreamingRequestAsync(request, timeout, ct))
         {
             yield return response;
+        }
+    }
+
+    public async Task<WebSocketOpenResultMessage?> OpenWebSocketAsync(
+        WebSocketOpenMessage request,
+        TimeSpan timeout,
+        CancellationToken ct)
+    {
+        var connection = ActiveConnection;
+        if (connection == null)
+        {
+            _logger.LogWarning("No active connection to open websocket session {SessionId}", request.SessionId);
+            return null;
+        }
+
+        return await connection.OpenWebSocketAsync(request, timeout, ct);
+    }
+
+    public async Task SendWebSocketFrameAsync(WebSocketFrameMessage frame, CancellationToken ct)
+    {
+        var connection = ActiveConnection;
+        if (connection == null)
+        {
+            _logger.LogWarning("No active connection to send websocket frame for session {SessionId}", frame.SessionId);
+            return;
+        }
+
+        await connection.SendWebSocketFrameAsync(frame, ct);
+    }
+
+    public async Task SendWebSocketCloseAsync(WebSocketCloseMessage close, CancellationToken ct)
+    {
+        var connection = ActiveConnection;
+        if (connection == null)
+        {
+            _logger.LogWarning("No active connection to send websocket close for session {SessionId}", close.SessionId);
+            return;
+        }
+
+        await connection.SendWebSocketCloseAsync(close, ct);
+    }
+
+    public async IAsyncEnumerable<TunnelMessage> ReceiveWebSocketMessagesAsync(
+        string sessionId,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+    {
+        var connection = ActiveConnection;
+        if (connection == null)
+        {
+            _logger.LogWarning("No active connection to receive websocket messages for session {SessionId}", sessionId);
+            yield break;
+        }
+
+        await foreach (var message in connection.ReceiveWebSocketMessagesAsync(sessionId, ct))
+        {
+            yield return message;
         }
     }
 }

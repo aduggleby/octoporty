@@ -19,6 +19,8 @@ public sealed class TunnelConnection : ITunnelConnection, IAsyncDisposable
     private readonly Channel<TunnelMessage> _outboundChannel;
     private readonly ConcurrentDictionary<string, TaskCompletionSource<ResponseMessage>> _pendingRequests = new();
     private readonly ConcurrentDictionary<string, Channel<StreamingResponse>> _streamingRequests = new();
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<WebSocketOpenResultMessage>> _pendingWebSocketOpens = new();
+    private readonly ConcurrentDictionary<string, Channel<TunnelMessage>> _webSocketSessions = new();
     private readonly ConcurrentDictionary<Guid, PortMappingDto> _mappings = new();
     private readonly CancellationTokenSource _cts = new();
 
@@ -29,6 +31,7 @@ public sealed class TunnelConnection : ITunnelConnection, IAsyncDisposable
     public bool IsConnected => _webSocket.State == WebSocketState.Open;
     public DateTime ConnectedAt { get; } = DateTime.UtcNow;
     public string? AgentVersion { get; private set; }
+    public bool AgentSupportsWebSocketProxy { get; private set; }
     public IReadOnlyDictionary<Guid, PortMappingDto> Mappings => _mappings;
 
     public TunnelConnection(WebSocket webSocket, ILogger<TunnelConnection> logger)
@@ -42,6 +45,7 @@ public sealed class TunnelConnection : ITunnelConnection, IAsyncDisposable
     }
 
     public void SetAgentVersion(string version) => AgentVersion = version;
+    public void SetAgentCapabilities(bool supportsWebSocketProxy) => AgentSupportsWebSocketProxy = supportsWebSocketProxy;
 
     public void UpdateMappings(IEnumerable<PortMappingDto> mappings)
     {
@@ -173,6 +177,114 @@ public sealed class TunnelConnection : ITunnelConnection, IAsyncDisposable
         }
     }
 
+    public async Task<WebSocketOpenResultMessage?> OpenWebSocketAsync(
+        WebSocketOpenMessage request,
+        TimeSpan timeout,
+        CancellationToken ct)
+    {
+        var tcs = new TaskCompletionSource<WebSocketOpenResultMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var sessionChannel = Channel.CreateBounded<TunnelMessage>(new BoundedChannelOptions(100)
+        {
+            FullMode = BoundedChannelFullMode.Wait
+        });
+
+        _pendingWebSocketOpens[request.SessionId] = tcs;
+        _webSocketSessions[request.SessionId] = sessionChannel;
+
+        try
+        {
+            await SendAsync(request, ct);
+
+            using var timeoutCts = new CancellationTokenSource(timeout);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+
+            try
+            {
+                var openResult = await tcs.Task.WaitAsync(linkedCts.Token);
+                if (!openResult.Accepted)
+                {
+                    sessionChannel.Writer.TryComplete();
+                    _webSocketSessions.TryRemove(request.SessionId, out _);
+                }
+
+                return openResult;
+            }
+            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+            {
+                _logger.LogWarning("WebSocket open {SessionId} timed out after {Timeout}ms", request.SessionId, timeout.TotalMilliseconds);
+                sessionChannel.Writer.TryComplete();
+                _webSocketSessions.TryRemove(request.SessionId, out _);
+                return null;
+            }
+        }
+        finally
+        {
+            _pendingWebSocketOpens.TryRemove(request.SessionId, out _);
+        }
+    }
+
+    public async Task SendWebSocketFrameAsync(WebSocketFrameMessage frame, CancellationToken ct)
+    {
+        await SendAsync(frame, ct);
+    }
+
+    public async Task SendWebSocketCloseAsync(WebSocketCloseMessage close, CancellationToken ct)
+    {
+        await SendAsync(close, ct);
+    }
+
+    public async IAsyncEnumerable<TunnelMessage> ReceiveWebSocketMessagesAsync(
+        string sessionId,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        if (!_webSocketSessions.TryGetValue(sessionId, out var channel))
+        {
+            yield break;
+        }
+
+        await foreach (var message in channel.Reader.ReadAllAsync(ct))
+        {
+            yield return message;
+
+            if (message is WebSocketCloseMessage)
+                break;
+        }
+    }
+
+    public void CompleteWebSocketOpen(WebSocketOpenResultMessage result)
+    {
+        if (_pendingWebSocketOpens.TryRemove(result.SessionId, out var tcs))
+        {
+            tcs.TrySetResult(result);
+            return;
+        }
+
+        _logger.LogWarning("Received WebSocket open result for unknown session {SessionId}", result.SessionId);
+    }
+
+    public void HandleWebSocketFrame(WebSocketFrameMessage frame)
+    {
+        if (_webSocketSessions.TryGetValue(frame.SessionId, out var channel))
+        {
+            channel.Writer.TryWrite(frame);
+            return;
+        }
+
+        _logger.LogWarning("Received WebSocket frame for unknown session {SessionId}", frame.SessionId);
+    }
+
+    public void HandleWebSocketClose(WebSocketCloseMessage close)
+    {
+        if (_webSocketSessions.TryRemove(close.SessionId, out var channel))
+        {
+            channel.Writer.TryWrite(close);
+            channel.Writer.TryComplete();
+            return;
+        }
+
+        _logger.LogWarning("Received WebSocket close for unknown session {SessionId}", close.SessionId);
+    }
+
     private async Task ReceiveLoopAsync(Func<TunnelMessage, Task> onMessageReceived, CancellationToken ct)
     {
         var buffer = new byte[64 * 1024];
@@ -264,6 +376,18 @@ public sealed class TunnelConnection : ITunnelConnection, IAsyncDisposable
             channel.Writer.TryComplete();
         }
         _streamingRequests.Clear();
+
+        foreach (var pendingOpen in _pendingWebSocketOpens.Values)
+        {
+            pendingOpen.TrySetCanceled();
+        }
+        _pendingWebSocketOpens.Clear();
+
+        foreach (var session in _webSocketSessions.Values)
+        {
+            session.Writer.TryComplete();
+        }
+        _webSocketSessions.Clear();
 
         if (_receiveTask != null)
             await _receiveTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);

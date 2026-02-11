@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Octoporty.Agent.Data;
@@ -39,6 +40,7 @@ public class TunnelClient : BackgroundService
     private TaskCompletionSource<UpdateResponseMessage>? _pendingUpdateResponse;
     private TaskCompletionSource<GetLogsResponseMessage>? _pendingLogsResponse;
     private TaskCompletionSource<GetCaddyConfigResponseMessage>? _pendingCaddyConfigResponse;
+    private readonly ConcurrentDictionary<string, ProxiedWebSocketSession> _proxiedWebSockets = new();
 
     private static readonly string AgentVersion = typeof(TunnelClient).Assembly
         .GetName().Version?.ToString(3) ?? "0.0.0";
@@ -48,6 +50,7 @@ public class TunnelClient : BackgroundService
     public DateTime? LastConnectedAt { get; private set; }
     public string? LastError { get; private set; }
     public string? GatewayVersion { get; private set; }
+    public bool GatewaySupportsWebSocketProxy { get; private set; }
 
     /// <summary>
     /// Gateway uptime in seconds, reported by the Gateway in heartbeat acks.
@@ -176,7 +179,8 @@ public class TunnelClient : BackgroundService
         var authMessage = new AuthMessage
         {
             ApiKey = _options.ApiKey,
-            AgentVersion = AgentVersion
+            AgentVersion = AgentVersion,
+            SupportsWebSocketProxy = true
         };
 
         await SendMessageAsync(authMessage, ct);
@@ -199,6 +203,7 @@ public class TunnelClient : BackgroundService
             {
                 GatewayVersion = authResult.GatewayVersion;
                 _gatewayLandingPageHash = authResult.LandingPageHtmlHash;
+                GatewaySupportsWebSocketProxy = authResult.GatewaySupportsWebSocketProxy;
                 _logger.LogInformation("Authenticated successfully (Gateway v{Version})", GatewayVersion);
 
                 // Compare versions to determine if Gateway update is available
@@ -543,6 +548,18 @@ public class TunnelClient : BackgroundService
                 await _connectionCts!.CancelAsync();
                 break;
 
+            case WebSocketOpenMessage openMessage:
+                await HandleWebSocketOpenAsync(openMessage, ct);
+                break;
+
+            case WebSocketFrameMessage frameMessage:
+                await HandleWebSocketFrameAsync(frameMessage, ct);
+                break;
+
+            case WebSocketCloseMessage closeMessage:
+                await HandleWebSocketCloseAsync(closeMessage);
+                break;
+
             default:
                 _logger.LogWarning("Unhandled message type: {Type}", message.GetType().Name);
                 break;
@@ -600,6 +617,7 @@ public class TunnelClient : BackgroundService
     {
         _connectionCts?.Cancel();
         _outboundChannel.Writer.TryComplete();
+        await CloseAllProxiedWebSocketsAsync();
 
         if (_receiveTask != null)
             await _receiveTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
@@ -619,6 +637,247 @@ public class TunnelClient : BackgroundService
 
         _webSocket?.Dispose();
         _connectionCts?.Dispose();
+    }
+
+    private async Task HandleWebSocketOpenAsync(WebSocketOpenMessage openMessage, CancellationToken ct)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<OctoportyDbContext>();
+
+        var mapping = await db.PortMappings.FindAsync([openMessage.MappingId], ct);
+        if (mapping == null || !mapping.IsEnabled)
+        {
+            await _outboundChannel.Writer.WriteAsync(new WebSocketOpenResultMessage
+            {
+                SessionId = openMessage.SessionId,
+                Accepted = false,
+                StatusCode = 404,
+                Reason = "Mapping not found",
+                ResponseHeaders = new Dictionary<string, string[]>()
+            }, ct);
+            return;
+        }
+
+        var upstreamSocket = new ClientWebSocket();
+        var sessionCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+        try
+        {
+            foreach (var subprotocol in openMessage.Subprotocols)
+            {
+                if (!string.IsNullOrWhiteSpace(subprotocol))
+                    upstreamSocket.Options.AddSubProtocol(subprotocol);
+            }
+
+            // Forward selected handshake headers to internal services.
+            foreach (var (header, values) in openMessage.Headers)
+            {
+                if (!ShouldForwardWebSocketHeader(header))
+                    continue;
+
+                foreach (var value in values.Where(v => !string.IsNullOrWhiteSpace(v)))
+                {
+                    upstreamSocket.Options.SetRequestHeader(header, value);
+                }
+            }
+
+            var scheme = mapping.InternalUseTls ? "wss" : "ws";
+            var upstreamUri = new Uri($"{scheme}://{mapping.InternalHost}:{mapping.InternalPort}{openMessage.Path}");
+            await upstreamSocket.ConnectAsync(upstreamUri, sessionCts.Token);
+
+            var session = new ProxiedWebSocketSession(openMessage.SessionId, upstreamSocket, sessionCts);
+            _proxiedWebSockets[openMessage.SessionId] = session;
+            session.ReceiveTask = RelayUpstreamFramesAsync(session, sessionCts.Token);
+
+            await _outboundChannel.Writer.WriteAsync(new WebSocketOpenResultMessage
+            {
+                SessionId = openMessage.SessionId,
+                Accepted = true,
+                StatusCode = 101,
+                Reason = null,
+                SelectedSubprotocol = upstreamSocket.SubProtocol,
+                ResponseHeaders = new Dictionary<string, string[]>()
+            }, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to open proxied websocket session {SessionId}", openMessage.SessionId);
+
+            await _outboundChannel.Writer.WriteAsync(new WebSocketOpenResultMessage
+            {
+                SessionId = openMessage.SessionId,
+                Accepted = false,
+                StatusCode = 502,
+                Reason = "Failed to connect to upstream websocket service",
+                ResponseHeaders = new Dictionary<string, string[]>()
+            }, ct);
+
+            upstreamSocket.Dispose();
+            sessionCts.Dispose();
+        }
+    }
+
+    private async Task HandleWebSocketFrameAsync(WebSocketFrameMessage frameMessage, CancellationToken ct)
+    {
+        if (!_proxiedWebSockets.TryGetValue(frameMessage.SessionId, out var session))
+        {
+            _logger.LogWarning("Received websocket frame for unknown session {SessionId}", frameMessage.SessionId);
+            return;
+        }
+
+        var messageType = frameMessage.FrameType == WebSocketFrameType.Text
+            ? WebSocketMessageType.Text
+            : WebSocketMessageType.Binary;
+
+        try
+        {
+            await session.Socket.SendAsync(frameMessage.Payload, messageType, frameMessage.IsFinal, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send websocket frame to upstream for session {SessionId}", frameMessage.SessionId);
+            await CloseProxiedWebSocketAsync(frameMessage.SessionId, WebSocketCloseStatus.InternalServerError, "Upstream send failed", "Agent");
+        }
+    }
+
+    private async Task HandleWebSocketCloseAsync(WebSocketCloseMessage closeMessage)
+    {
+        var closeStatus = closeMessage.CloseStatus.HasValue && Enum.IsDefined(typeof(WebSocketCloseStatus), closeMessage.CloseStatus.Value)
+            ? (WebSocketCloseStatus)closeMessage.CloseStatus.Value
+            : WebSocketCloseStatus.NormalClosure;
+
+        await CloseProxiedWebSocketAsync(closeMessage.SessionId, closeStatus, closeMessage.Description, "Gateway");
+    }
+
+    private async Task RelayUpstreamFramesAsync(ProxiedWebSocketSession session, CancellationToken ct)
+    {
+        var buffer = new byte[64 * 1024];
+        var closeForwarded = false;
+
+        try
+        {
+            while (!ct.IsCancellationRequested && session.Socket.State == WebSocketState.Open)
+            {
+                var result = await session.Socket.ReceiveAsync(buffer, ct);
+
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    await _outboundChannel.Writer.WriteAsync(new WebSocketCloseMessage
+                    {
+                        SessionId = session.SessionId,
+                        CloseStatus = (int?)result.CloseStatus,
+                        Description = result.CloseStatusDescription,
+                        Initiator = "AgentUpstream"
+                    }, ct);
+                    closeForwarded = true;
+                    break;
+                }
+
+                var frameType = result.MessageType == WebSocketMessageType.Text
+                    ? WebSocketFrameType.Text
+                    : WebSocketFrameType.Binary;
+
+                await _outboundChannel.Writer.WriteAsync(new WebSocketFrameMessage
+                {
+                    SessionId = session.SessionId,
+                    FrameType = frameType,
+                    IsFinal = result.EndOfMessage,
+                    Payload = buffer.AsSpan(0, result.Count).ToArray()
+                }, ct);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when session is being closed.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "WebSocket upstream receive loop failed for session {SessionId}", session.SessionId);
+            await _outboundChannel.Writer.WriteAsync(new WebSocketCloseMessage
+            {
+                SessionId = session.SessionId,
+                CloseStatus = (int)WebSocketCloseStatus.InternalServerError,
+                Description = "Upstream receive failed",
+                Initiator = "Agent"
+            }, CancellationToken.None);
+        }
+        finally
+        {
+            var initiator = closeForwarded ? "Gateway" : "Agent";
+            await CloseProxiedWebSocketAsync(session.SessionId, WebSocketCloseStatus.NormalClosure, "Session complete", initiator);
+        }
+    }
+
+    private async Task CloseProxiedWebSocketAsync(string sessionId, WebSocketCloseStatus closeStatus, string? description, string initiator)
+    {
+        if (!_proxiedWebSockets.TryRemove(sessionId, out var session))
+            return;
+
+        try
+        {
+            await session.Cancellation.CancelAsync();
+            if (session.Socket.State == WebSocketState.Open || session.Socket.State == WebSocketState.CloseReceived)
+            {
+                await session.Socket.CloseAsync(closeStatus, description ?? "Closed", CancellationToken.None);
+            }
+        }
+        catch
+        {
+            // Best-effort close and cleanup.
+        }
+        finally
+        {
+            session.Socket.Dispose();
+            session.Cancellation.Dispose();
+        }
+
+        // Avoid echoing closes back forever; only Agent-originated closes are sent upstream.
+        if (!string.Equals(initiator, "Gateway", StringComparison.Ordinal))
+        {
+            await _outboundChannel.Writer.WriteAsync(new WebSocketCloseMessage
+            {
+                SessionId = sessionId,
+                CloseStatus = (int)closeStatus,
+                Description = description,
+                Initiator = initiator
+            }, CancellationToken.None);
+        }
+    }
+
+    private async Task CloseAllProxiedWebSocketsAsync()
+    {
+        var sessionIds = _proxiedWebSockets.Keys.ToArray();
+        foreach (var sessionId in sessionIds)
+        {
+            await CloseProxiedWebSocketAsync(sessionId, WebSocketCloseStatus.EndpointUnavailable, "Tunnel disconnected", "Agent");
+        }
+    }
+
+    private static bool ShouldForwardWebSocketHeader(string headerName)
+    {
+        // Connection-management and handshake-key headers are regenerated by ClientWebSocket.
+        return !headerName.Equals("Connection", StringComparison.OrdinalIgnoreCase) &&
+               !headerName.Equals("Upgrade", StringComparison.OrdinalIgnoreCase) &&
+               !headerName.Equals("Host", StringComparison.OrdinalIgnoreCase) &&
+               !headerName.Equals("Sec-WebSocket-Key", StringComparison.OrdinalIgnoreCase) &&
+               !headerName.Equals("Sec-WebSocket-Version", StringComparison.OrdinalIgnoreCase) &&
+               !headerName.Equals("Sec-WebSocket-Extensions", StringComparison.OrdinalIgnoreCase) &&
+               !headerName.Equals("Sec-WebSocket-Protocol", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed class ProxiedWebSocketSession
+    {
+        public string SessionId { get; }
+        public ClientWebSocket Socket { get; }
+        public CancellationTokenSource Cancellation { get; }
+        public Task? ReceiveTask { get; set; }
+
+        public ProxiedWebSocketSession(string sessionId, ClientWebSocket socket, CancellationTokenSource cancellation)
+        {
+            SessionId = sessionId;
+            Socket = socket;
+            Cancellation = cancellation;
+        }
     }
 
     private void SetState(TunnelClientState newState)

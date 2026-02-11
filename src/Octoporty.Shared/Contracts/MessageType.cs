@@ -24,5 +24,9 @@ public enum MessageType : byte
     GetLogsResponse = 16,
     GetCaddyConfigRequest = 17,
     GetCaddyConfigResponse = 18,
+    WebSocketOpen = 19,
+    WebSocketOpenResult = 20,
+    WebSocketFrame = 21,
+    WebSocketClose = 22,
     Error = 255
 }

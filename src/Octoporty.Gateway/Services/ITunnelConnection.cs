@@ -13,11 +13,16 @@ public interface ITunnelConnection
     bool IsConnected { get; }
     DateTime ConnectedAt { get; }
     string? AgentVersion { get; }
+    bool AgentSupportsWebSocketProxy { get; }
     IReadOnlyDictionary<Guid, PortMappingDto> Mappings { get; }
 
     Task SendAsync(TunnelMessage message, CancellationToken ct);
     Task<ResponseMessage?> SendRequestAsync(RequestMessage request, TimeSpan timeout, CancellationToken ct);
     IAsyncEnumerable<StreamingResponse> SendStreamingRequestAsync(RequestMessage request, TimeSpan timeout, CancellationToken ct);
+    Task<WebSocketOpenResultMessage?> OpenWebSocketAsync(WebSocketOpenMessage request, TimeSpan timeout, CancellationToken ct);
+    Task SendWebSocketFrameAsync(WebSocketFrameMessage frame, CancellationToken ct);
+    Task SendWebSocketCloseAsync(WebSocketCloseMessage close, CancellationToken ct);
+    IAsyncEnumerable<TunnelMessage> ReceiveWebSocketMessagesAsync(string sessionId, CancellationToken ct);
 }
 
 public readonly record struct StreamingResponse(

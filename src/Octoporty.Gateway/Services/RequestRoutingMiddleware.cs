@@ -5,6 +5,7 @@
 // Strips hop-by-hop headers and enforces 10MB max body size.
 
 using System.Diagnostics;
+using System.Net.WebSockets;
 using Microsoft.AspNetCore.StaticFiles;
 using Octoporty.Shared.Contracts;
 
@@ -68,7 +69,190 @@ public sealed class RequestRoutingMiddleware
             mapping = _connectionManager.GetMappingById(mappingId);
         }
 
+        if (context.WebSockets.IsWebSocketRequest)
+        {
+            await ForwardWebSocketAsync(context, mappingId, mapping);
+            return;
+        }
+
         await ForwardRequestAsync(context, mappingId, mapping);
+    }
+
+    private async Task ForwardWebSocketAsync(HttpContext context, Guid mappingId, PortMappingDto? mapping)
+    {
+        var requestId = Activity.Current?.Id ?? Guid.NewGuid().ToString("N");
+        var sessionId = Guid.NewGuid().ToString("N");
+        var mappingName = mapping?.Name ?? "(unknown)";
+        var mappingDomain = mapping?.ExternalDomain ?? "(unknown)";
+
+        var headers = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, values) in context.Request.Headers)
+        {
+            headers[key] = values.Select(v => v ?? "").ToArray();
+        }
+
+        var openMessage = new WebSocketOpenMessage
+        {
+            SessionId = sessionId,
+            RequestId = requestId,
+            MappingId = mappingId,
+            Path = context.Request.Path + context.Request.QueryString,
+            Headers = headers,
+            Subprotocols = context.WebSockets.WebSocketRequestedProtocols.ToArray()
+        };
+
+        var connection = _connectionManager.ActiveConnection;
+        if (connection == null)
+        {
+            await HandleTunnelUnavailable(context, mappingId);
+            return;
+        }
+
+        if (!connection.AgentSupportsWebSocketProxy)
+        {
+            await WriteErrorResponse(
+                context,
+                StatusCodes.Status501NotImplemented,
+                "WebSocket Unsupported",
+                "Connected Agent does not support websocket proxy forwarding");
+            return;
+        }
+
+        var openResult = await connection.OpenWebSocketAsync(openMessage, DefaultTimeout, context.RequestAborted);
+        if (openResult == null)
+        {
+            await HandleTunnelUnavailable(context, mappingId);
+            return;
+        }
+
+        if (!openResult.Accepted)
+        {
+            var statusCode = openResult.StatusCode > 0 ? openResult.StatusCode : StatusCodes.Status502BadGateway;
+            var reason = string.IsNullOrWhiteSpace(openResult.Reason) ? "WebSocket upstream rejected handshake" : openResult.Reason;
+            await WriteErrorResponse(context, statusCode, "WebSocket Rejected", reason);
+            return;
+        }
+
+        if (context.Response.HasStarted)
+        {
+            _logger.LogWarning("Cannot accept websocket session {SessionId} because response already started", sessionId);
+            return;
+        }
+
+        var webSocket = string.IsNullOrEmpty(openResult.SelectedSubprotocol)
+            ? await context.WebSockets.AcceptWebSocketAsync()
+            : await context.WebSockets.AcceptWebSocketAsync(openResult.SelectedSubprotocol);
+
+        using var relayCts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+        var relayToken = relayCts.Token;
+
+        var inboundRelayTask = RelayClientToTunnelAsync(connection, webSocket, sessionId, relayToken);
+        var outboundRelayTask = RelayTunnelToClientAsync(connection, webSocket, sessionId, relayToken);
+
+        await Task.WhenAny(inboundRelayTask, outboundRelayTask);
+        await relayCts.CancelAsync();
+
+        await inboundRelayTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        await outboundRelayTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+
+        if (webSocket.State == WebSocketState.Open || webSocket.State == WebSocketState.CloseReceived)
+        {
+            try
+            {
+                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Session closed", CancellationToken.None);
+            }
+            catch
+            {
+                // Best-effort close.
+            }
+        }
+
+        _logger.LogInformation("WebSocket session {SessionId} [{Host}] (mapping: {MappingName} - {MappingDomain}) closed",
+            sessionId, context.Request.Host.Value, mappingName, mappingDomain);
+    }
+
+    private static async Task RelayClientToTunnelAsync(
+        ITunnelConnection connection,
+        WebSocket clientSocket,
+        string sessionId,
+        CancellationToken ct)
+    {
+        var buffer = new byte[64 * 1024];
+
+        try
+        {
+            while (!ct.IsCancellationRequested && clientSocket.State == WebSocketState.Open)
+            {
+                var result = await clientSocket.ReceiveAsync(buffer, ct);
+
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    await connection.SendWebSocketCloseAsync(new WebSocketCloseMessage
+                    {
+                        SessionId = sessionId,
+                        CloseStatus = (int?)result.CloseStatus,
+                        Description = result.CloseStatusDescription,
+                        Initiator = "GatewayClient"
+                    }, ct);
+                    break;
+                }
+
+                var frameType = result.MessageType switch
+                {
+                    WebSocketMessageType.Text => WebSocketFrameType.Text,
+                    _ => WebSocketFrameType.Binary
+                };
+
+                await connection.SendWebSocketFrameAsync(new WebSocketFrameMessage
+                {
+                    SessionId = sessionId,
+                    FrameType = frameType,
+                    IsFinal = result.EndOfMessage,
+                    Payload = buffer.AsSpan(0, result.Count).ToArray()
+                }, ct);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected on cancellation.
+        }
+    }
+
+    private static async Task RelayTunnelToClientAsync(
+        ITunnelConnection connection,
+        WebSocket clientSocket,
+        string sessionId,
+        CancellationToken ct)
+    {
+        await foreach (var message in connection.ReceiveWebSocketMessagesAsync(sessionId, ct))
+        {
+            if (ct.IsCancellationRequested)
+                break;
+
+            if (message is WebSocketFrameMessage frame)
+            {
+                var messageType = frame.FrameType == WebSocketFrameType.Text
+                    ? WebSocketMessageType.Text
+                    : WebSocketMessageType.Binary;
+
+                await clientSocket.SendAsync(frame.Payload, messageType, frame.IsFinal, ct);
+                continue;
+            }
+
+            if (message is WebSocketCloseMessage close)
+            {
+                var closeStatus = close.CloseStatus.HasValue && Enum.IsDefined(typeof(WebSocketCloseStatus), close.CloseStatus.Value)
+                    ? (WebSocketCloseStatus)close.CloseStatus.Value
+                    : WebSocketCloseStatus.NormalClosure;
+
+                if (clientSocket.State == WebSocketState.Open || clientSocket.State == WebSocketState.CloseReceived)
+                {
+                    await clientSocket.CloseAsync(closeStatus, close.Description ?? "Closed by upstream", ct);
+                }
+
+                break;
+            }
+        }
     }
 
     private async Task ForwardRequestAsync(HttpContext context, Guid mappingId, PortMappingDto? mapping)

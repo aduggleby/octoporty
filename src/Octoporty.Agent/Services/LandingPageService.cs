@@ -4,7 +4,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Octoporty.Agent.Data;
 using Octoporty.Shared.Entities;
 
@@ -13,11 +13,11 @@ namespace Octoporty.Agent.Services;
 public class LandingPageService
 {
     private const string LandingPageKey = "LandingPageHtml";
-    private readonly IDbContextFactory<OctoportyDbContext> _dbContextFactory;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public LandingPageService(IDbContextFactory<OctoportyDbContext> dbContextFactory)
+    public LandingPageService(IServiceScopeFactory scopeFactory)
     {
-        _dbContextFactory = dbContextFactory;
+        _scopeFactory = scopeFactory;
     }
 
     /// <summary>
@@ -26,7 +26,8 @@ public class LandingPageService
     /// </summary>
     public async Task<(string Html, string Hash)> GetLandingPageAsync()
     {
-        await using var db = await _dbContextFactory.CreateDbContextAsync();
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<OctoportyDbContext>();
 
         var setting = await db.Settings.FindAsync(LandingPageKey);
         var html = setting?.Value ?? GetDefaultHtml();
@@ -40,7 +41,8 @@ public class LandingPageService
     /// </summary>
     public async Task<string> SetLandingPageAsync(string html)
     {
-        await using var db = await _dbContextFactory.CreateDbContextAsync();
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<OctoportyDbContext>();
 
         var setting = await db.Settings.FindAsync(LandingPageKey);
         if (setting is null)
@@ -63,7 +65,8 @@ public class LandingPageService
     /// </summary>
     public async Task<(string Html, string Hash)> ResetToDefaultAsync()
     {
-        await using var db = await _dbContextFactory.CreateDbContextAsync();
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<OctoportyDbContext>();
 
         var setting = await db.Settings.FindAsync(LandingPageKey);
         if (setting is not null)

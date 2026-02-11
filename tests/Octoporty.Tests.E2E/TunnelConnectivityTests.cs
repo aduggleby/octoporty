@@ -3,6 +3,7 @@
 // Tests the full request round-trip through the WebSocket tunnel.
 
 using System.Net.Http.Json;
+using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 
@@ -11,6 +12,25 @@ namespace Octoporty.Tests.E2E;
 [TestFixture]
 public class TunnelConnectivityTests : TestBase
 {
+    private async Task<bool> IsTunnelConnectedAsync()
+    {
+        using var statusClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(10)
+        };
+
+        try
+        {
+            var statusResponse = await statusClient.GetAsync($"{GatewayUrl}/test/tunnel");
+            var statusContent = await statusResponse.Content.ReadAsStringAsync();
+            return statusContent.Contains("\"connected\":true");
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     [Test]
     public async Task Gateway_Health_ReturnsStatus()
     {
@@ -165,5 +185,102 @@ public class TunnelConnectivityTests : TestBase
             Assert.That(content, Does.Contain("mappings"),
                 "Connected tunnel should include mappings array");
         }
+    }
+
+    [Test]
+    public async Task Tunnel_WebSocket_Echo_RoundTrip_Works()
+    {
+        await Task.Delay(3000);
+
+        if (!await IsTunnelConnectedAsync())
+        {
+            Assert.Ignore("Tunnel not connected - websocket round-trip test skipped");
+            return;
+        }
+
+        var wsUrl = GatewayUrl.Replace("http://", "ws://", StringComparison.OrdinalIgnoreCase)
+            .Replace("https://", "wss://", StringComparison.OrdinalIgnoreCase)
+            + "/test/tunnel/ws-echo";
+
+        using var socket = new ClientWebSocket();
+        using var wsTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await socket.ConnectAsync(new Uri(wsUrl), wsTimeout.Token);
+
+        var payload = Encoding.UTF8.GetBytes("octoporty-websocket-test");
+        await socket.SendAsync(payload, WebSocketMessageType.Text, true, wsTimeout.Token);
+
+        var buffer = new byte[256];
+        var result = await socket.ReceiveAsync(buffer, wsTimeout.Token);
+        var echoed = Encoding.UTF8.GetString(buffer, 0, result.Count);
+
+        Assert.That(result.MessageType, Is.EqualTo(WebSocketMessageType.Text),
+            "Expected echoed text websocket frame");
+        Assert.That(echoed, Is.EqualTo("octoporty-websocket-test"),
+            "Echoed websocket payload should match sent payload");
+
+        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "test complete", wsTimeout.Token);
+    }
+
+    [Test]
+    public async Task Tunnel_WebSocket_Binary_RoundTrip_Works()
+    {
+        await Task.Delay(3000);
+
+        if (!await IsTunnelConnectedAsync())
+        {
+            Assert.Ignore("Tunnel not connected - websocket binary test skipped");
+            return;
+        }
+
+        var wsUrl = GatewayUrl.Replace("http://", "ws://", StringComparison.OrdinalIgnoreCase)
+            .Replace("https://", "wss://", StringComparison.OrdinalIgnoreCase)
+            + "/test/tunnel/ws-echo";
+
+        using var socket = new ClientWebSocket();
+        using var wsTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await socket.ConnectAsync(new Uri(wsUrl), wsTimeout.Token);
+
+        var payload = new byte[] { 1, 2, 3, 4, 5, 250, 251, 252, 253, 254, 255 };
+        await socket.SendAsync(payload, WebSocketMessageType.Binary, true, wsTimeout.Token);
+
+        var buffer = new byte[256];
+        var result = await socket.ReceiveAsync(buffer, wsTimeout.Token);
+        var echoed = buffer.AsSpan(0, result.Count).ToArray();
+
+        Assert.That(result.MessageType, Is.EqualTo(WebSocketMessageType.Binary),
+            "Expected echoed binary websocket frame");
+        Assert.That(echoed, Is.EqualTo(payload),
+            "Echoed binary payload should match sent payload");
+
+        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "test complete", wsTimeout.Token);
+    }
+
+    [Test]
+    public async Task Tunnel_WebSocket_Close_Handshake_Propagates()
+    {
+        await Task.Delay(3000);
+
+        if (!await IsTunnelConnectedAsync())
+        {
+            Assert.Ignore("Tunnel not connected - websocket close test skipped");
+            return;
+        }
+
+        var wsUrl = GatewayUrl.Replace("http://", "ws://", StringComparison.OrdinalIgnoreCase)
+            .Replace("https://", "wss://", StringComparison.OrdinalIgnoreCase)
+            + "/test/tunnel/ws-echo";
+
+        using var socket = new ClientWebSocket();
+        using var wsTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await socket.ConnectAsync(new Uri(wsUrl), wsTimeout.Token);
+
+        await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "client-close", wsTimeout.Token);
+
+        var buffer = new byte[64];
+        var result = await socket.ReceiveAsync(buffer, wsTimeout.Token);
+
+        Assert.That(result.MessageType, Is.EqualTo(WebSocketMessageType.Close),
+            "Expected close frame acknowledgment from tunnel websocket endpoint");
+        Assert.That(result.CloseStatus, Is.EqualTo(WebSocketCloseStatus.NormalClosure));
     }
 }

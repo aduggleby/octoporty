@@ -6,6 +6,7 @@
 // Uses CreateSlimBuilder to avoid file watcher issues in read-only containers.
 
 using System.Text;
+using System.Net.WebSockets;
 using FastEndpoints;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -170,8 +171,6 @@ if (!string.IsNullOrEmpty(dbPath))
 }
 builder.Services.AddDbContext<OctoportyDbContext>(options =>
     options.UseSqlite(connectionString));
-builder.Services.AddDbContextFactory<OctoportyDbContext>(options =>
-    options.UseSqlite(connectionString));
 
 // JWT Authentication with cookie support (HIGH-01)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -271,6 +270,7 @@ app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseWebSockets();
 
 app.UseFastEndpoints(c =>
 {
@@ -294,6 +294,41 @@ app.MapGet("/health", (TunnelClient tunnelClient) =>
     {
         status = tunnelClient.State == TunnelClientState.Connected ? "healthy" : "degraded"
     });
+}).AllowAnonymous();
+
+// Test websocket endpoint for end-to-end tunnel websocket validation.
+// Echoes text/binary frames and mirrors close semantics.
+app.MapGet("/api/v1/test/ws-echo", async (HttpContext context) =>
+{
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode = 400;
+        await context.Response.WriteAsync("WebSocket connection required");
+        return;
+    }
+
+    using var socket = await context.WebSockets.AcceptWebSocketAsync();
+    var buffer = new byte[64 * 1024];
+
+    while (socket.State == WebSocketState.Open)
+    {
+        var result = await socket.ReceiveAsync(buffer, context.RequestAborted);
+
+        if (result.MessageType == WebSocketMessageType.Close)
+        {
+            await socket.CloseAsync(
+                result.CloseStatus ?? WebSocketCloseStatus.NormalClosure,
+                result.CloseStatusDescription,
+                context.RequestAborted);
+            return;
+        }
+
+        await socket.SendAsync(
+            buffer.AsMemory(0, result.Count),
+            result.MessageType,
+            result.EndOfMessage,
+            context.RequestAborted);
+    }
 }).AllowAnonymous();
 
 // SPA fallback - serve index.html for client-side routing (SPA handles auth)

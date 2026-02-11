@@ -4,6 +4,7 @@
 // Used for deployment verification and debugging.
 
 using System.Text;
+using System.Net.WebSockets;
 using Octoporty.Gateway.Services;
 using Octoporty.Shared.Contracts;
 
@@ -32,6 +33,7 @@ public static class TunnelTestEndpoints
                 connected = true,
                 connectionId = connection.ConnectionId,
                 agentVersion = connection.AgentVersion,
+                agentSupportsWebSocketProxy = connection.AgentSupportsWebSocketProxy,
                 mappingCount = connection.Mappings.Count,
                 mappings = connection.Mappings.Values.Select(m => new
                 {
@@ -187,5 +189,137 @@ public static class TunnelTestEndpoints
                 body = response.Body != null ? Encoding.UTF8.GetString(response.Body) : null
             });
         });
+
+        // GET /test/tunnel/ws-echo - WebSocket round-trip through Agent websocket test endpoint
+        app.MapGet("/test/tunnel/ws-echo", async (
+            HttpContext context,
+            ITunnelConnectionManager connectionManager,
+            CancellationToken ct) =>
+        {
+            if (!context.WebSockets.IsWebSocketRequest)
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteAsync("WebSocket connection required", ct);
+                return;
+            }
+
+            var connection = connectionManager.ActiveConnection;
+            if (connection == null)
+            {
+                context.Response.StatusCode = 503;
+                await context.Response.WriteAsync("No Agent connected", ct);
+                return;
+            }
+
+            if (!connection.AgentSupportsWebSocketProxy)
+            {
+                context.Response.StatusCode = 501;
+                await context.Response.WriteAsync("Connected Agent does not support websocket proxy forwarding", ct);
+                return;
+            }
+
+            var mapping = connection.Mappings.Values.FirstOrDefault(m => m.IsEnabled);
+            if (mapping == null)
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteAsync("No enabled mappings configured", ct);
+                return;
+            }
+
+            var sessionId = Guid.NewGuid().ToString("N");
+            var openResult = await connection.OpenWebSocketAsync(new WebSocketOpenMessage
+            {
+                SessionId = sessionId,
+                RequestId = Guid.NewGuid().ToString("N"),
+                MappingId = mapping.Id,
+                Path = "/api/v1/test/ws-echo",
+                Headers = new Dictionary<string, string[]>(),
+                Subprotocols = []
+            }, TimeSpan.FromSeconds(30), ct);
+
+            if (openResult == null || !openResult.Accepted)
+            {
+                context.Response.StatusCode = openResult?.StatusCode ?? 502;
+                await context.Response.WriteAsync(openResult?.Reason ?? "Failed to open upstream websocket", ct);
+                return;
+            }
+
+            using var socket = await context.WebSockets.AcceptWebSocketAsync(openResult.SelectedSubprotocol);
+            using var relayCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+            var inTask = RelayClientToTunnelAsync(connection, socket, sessionId, relayCts.Token);
+            var outTask = RelayTunnelToClientAsync(connection, socket, sessionId, relayCts.Token);
+
+            await Task.WhenAny(inTask, outTask);
+            await relayCts.CancelAsync();
+            await inTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            await outTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        });
+    }
+
+    private static async Task RelayClientToTunnelAsync(
+        ITunnelConnection connection,
+        WebSocket clientSocket,
+        string sessionId,
+        CancellationToken ct)
+    {
+        var buffer = new byte[64 * 1024];
+
+        while (!ct.IsCancellationRequested && clientSocket.State == WebSocketState.Open)
+        {
+            var result = await clientSocket.ReceiveAsync(buffer, ct);
+            if (result.MessageType == WebSocketMessageType.Close)
+            {
+                await connection.SendWebSocketCloseAsync(new WebSocketCloseMessage
+                {
+                    SessionId = sessionId,
+                    CloseStatus = (int?)result.CloseStatus,
+                    Description = result.CloseStatusDescription,
+                    Initiator = "GatewayTestClient"
+                }, ct);
+                return;
+            }
+
+            await connection.SendWebSocketFrameAsync(new WebSocketFrameMessage
+            {
+                SessionId = sessionId,
+                FrameType = result.MessageType == WebSocketMessageType.Text ? WebSocketFrameType.Text : WebSocketFrameType.Binary,
+                IsFinal = result.EndOfMessage,
+                Payload = buffer.AsSpan(0, result.Count).ToArray()
+            }, ct);
+        }
+    }
+
+    private static async Task RelayTunnelToClientAsync(
+        ITunnelConnection connection,
+        WebSocket clientSocket,
+        string sessionId,
+        CancellationToken ct)
+    {
+        await foreach (var message in connection.ReceiveWebSocketMessagesAsync(sessionId, ct))
+        {
+            if (message is WebSocketFrameMessage frame)
+            {
+                await clientSocket.SendAsync(
+                    frame.Payload,
+                    frame.FrameType == WebSocketFrameType.Text ? WebSocketMessageType.Text : WebSocketMessageType.Binary,
+                    frame.IsFinal,
+                    ct);
+                continue;
+            }
+
+            if (message is WebSocketCloseMessage close)
+            {
+                if (clientSocket.State == WebSocketState.Open || clientSocket.State == WebSocketState.CloseReceived)
+                {
+                    var closeStatus = close.CloseStatus.HasValue && Enum.IsDefined(typeof(WebSocketCloseStatus), close.CloseStatus.Value)
+                        ? (WebSocketCloseStatus)close.CloseStatus.Value
+                        : WebSocketCloseStatus.NormalClosure;
+
+                    await clientSocket.CloseAsync(closeStatus, close.Description, ct);
+                }
+                return;
+            }
+        }
     }
 }

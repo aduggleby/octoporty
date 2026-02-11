@@ -26,6 +26,10 @@ namespace Octoporty.Shared.Contracts;
 [Union(16, typeof(GetLogsResponseMessage))]
 [Union(17, typeof(GetCaddyConfigRequestMessage))]
 [Union(18, typeof(GetCaddyConfigResponseMessage))]
+[Union(19, typeof(WebSocketOpenMessage))]
+[Union(20, typeof(WebSocketOpenResultMessage))]
+[Union(21, typeof(WebSocketFrameMessage))]
+[Union(22, typeof(WebSocketCloseMessage))]
 public abstract class TunnelMessage
 {
     [IgnoreMember]
@@ -43,6 +47,9 @@ public sealed class AuthMessage : TunnelMessage
 
     [Key(1)]
     public required string AgentVersion { get; init; }
+
+    [Key(2)]
+    public bool SupportsWebSocketProxy { get; init; }
 }
 
 [MessagePackObject]
@@ -66,6 +73,9 @@ public sealed class AuthResultMessage : TunnelMessage
     /// </summary>
     [Key(3)]
     public string? LandingPageHtmlHash { get; init; }
+
+    [Key(4)]
+    public bool GatewaySupportsWebSocketProxy { get; init; }
 }
 
 [MessagePackObject]
@@ -492,4 +502,98 @@ public sealed class GetCaddyConfigResponseMessage : TunnelMessage
     /// </summary>
     [Key(3)]
     public string? ConfigJson { get; init; }
+}
+
+[MessagePackObject]
+public sealed class WebSocketOpenMessage : TunnelMessage
+{
+    [IgnoreMember]
+    public override MessageType Type => MessageType.WebSocketOpen;
+
+    [Key(0)]
+    public required string SessionId { get; init; }
+
+    [Key(1)]
+    public required string RequestId { get; init; }
+
+    [Key(2)]
+    public required Guid MappingId { get; init; }
+
+    [Key(3)]
+    public required string Path { get; init; }
+
+    [Key(4)]
+    public required Dictionary<string, string[]> Headers { get; init; }
+
+    [Key(5)]
+    public required string[] Subprotocols { get; init; }
+}
+
+[MessagePackObject]
+public sealed class WebSocketOpenResultMessage : TunnelMessage
+{
+    [IgnoreMember]
+    public override MessageType Type => MessageType.WebSocketOpenResult;
+
+    [Key(0)]
+    public required string SessionId { get; init; }
+
+    [Key(1)]
+    public required bool Accepted { get; init; }
+
+    [Key(2)]
+    public required int StatusCode { get; init; }
+
+    [Key(3)]
+    public string? Reason { get; init; }
+
+    [Key(4)]
+    public required Dictionary<string, string[]> ResponseHeaders { get; init; }
+
+    [Key(5)]
+    public string? SelectedSubprotocol { get; init; }
+}
+
+public enum WebSocketFrameType : byte
+{
+    Text = 1,
+    Binary = 2
+}
+
+[MessagePackObject]
+public sealed class WebSocketFrameMessage : TunnelMessage
+{
+    [IgnoreMember]
+    public override MessageType Type => MessageType.WebSocketFrame;
+
+    [Key(0)]
+    public required string SessionId { get; init; }
+
+    [Key(1)]
+    public required WebSocketFrameType FrameType { get; init; }
+
+    [Key(2)]
+    public required bool IsFinal { get; init; }
+
+    [Key(3)]
+    public required byte[] Payload { get; init; }
+}
+
+[MessagePackObject]
+public sealed class WebSocketCloseMessage : TunnelMessage
+{
+    [IgnoreMember]
+    public override MessageType Type => MessageType.WebSocketClose;
+
+    [Key(0)]
+    public required string SessionId { get; init; }
+
+    [Key(1)]
+    public int? CloseStatus { get; init; }
+
+    [Key(2)]
+    public string? Description { get; init; }
+
+    [Key(3)]
+    public required string Initiator { get; init; }
 }

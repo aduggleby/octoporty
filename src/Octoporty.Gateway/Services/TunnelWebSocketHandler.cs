@@ -112,7 +112,8 @@ public class TunnelWebSocketHandler
                     Success = isValid,
                     Error = isValid ? null : "Invalid API key",
                     GatewayVersion = GatewayVersion,
-                    LandingPageHtmlHash = _gatewayState.LandingPageHash
+                    LandingPageHtmlHash = _gatewayState.LandingPageHash,
+                    GatewaySupportsWebSocketProxy = true
                 };
 
                 await connection.SendRawAsync(TunnelSerializer.Serialize(response), linkedCts.Token);
@@ -120,6 +121,7 @@ public class TunnelWebSocketHandler
                 if (isValid)
                 {
                     connection.SetAgentVersion(authMessage.AgentVersion);
+                    connection.SetAgentCapabilities(authMessage.SupportsWebSocketProxy);
                     _logger.LogInformation("Connection {ConnectionId} authenticated (Agent v{Version})",
                         connection.ConnectionId, authMessage.AgentVersion);
                 }
@@ -191,6 +193,18 @@ public class TunnelWebSocketHandler
 
             case GetCaddyConfigRequestMessage getCaddyConfigRequest:
                 await HandleGetCaddyConfigRequestAsync(connection, getCaddyConfigRequest, ct);
+                break;
+
+            case WebSocketOpenResultMessage openResult:
+                connection.CompleteWebSocketOpen(openResult);
+                break;
+
+            case WebSocketFrameMessage frame:
+                connection.HandleWebSocketFrame(frame);
+                break;
+
+            case WebSocketCloseMessage close:
+                connection.HandleWebSocketClose(close);
                 break;
 
             default:
