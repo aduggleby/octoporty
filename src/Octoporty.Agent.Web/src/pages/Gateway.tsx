@@ -192,10 +192,17 @@ export function GatewayPage() {
     <div>
       {/* Page Header */}
       <div className="page-header">
-        <h1 className="page-title">Gateway</h1>
-        <p className="page-subtitle">
-          Gateway information and real-time logs
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="page-title">Gateway</h1>
+            <p className="page-subtitle">
+              Gateway information and real-time logs
+            </p>
+          </div>
+          <Link to="/gateway/logs" className="btn btn-ghost btn-sm">
+            Open Log Detail
+          </Link>
+        </div>
       </div>
 
       {/* Gateway Info Panel */}

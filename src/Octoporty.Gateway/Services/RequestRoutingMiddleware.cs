@@ -5,6 +5,7 @@
 // Strips hop-by-hop headers and enforces 10MB max body size.
 
 using System.Diagnostics;
+using System.Text;
 using System.Net.WebSockets;
 using Microsoft.AspNetCore.StaticFiles;
 using Octoporty.Shared.Contracts;
@@ -20,6 +21,7 @@ public sealed class RequestRoutingMiddleware
 
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
     private const int MaxBodySize = 10 * 1024 * 1024; // 10MB
+    private static readonly HashSet<int> DetailedStatusCodes = [StatusCodes.Status404NotFound, StatusCodes.Status502BadGateway];
 
     // Used to infer Content-Type from file extension when upstream doesn't provide one
     private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
@@ -269,6 +271,8 @@ public sealed class RequestRoutingMiddleware
         var stopwatch = Stopwatch.StartNew();
         var mappingName = mapping?.Name ?? "(unknown)";
         var mappingDomain = mapping?.ExternalDomain ?? "(unknown)";
+        string? errorBodyPreview = null;
+        int? upstreamStatusCode = null;
 
         try
         {
@@ -321,6 +325,7 @@ public sealed class RequestRoutingMiddleware
                 if (streamingResponse.InitialResponse != null && !headersApplied)
                 {
                     var response = streamingResponse.InitialResponse;
+                    upstreamStatusCode = response.StatusCode;
 
                     // Write response
                     context.Response.StatusCode = response.StatusCode;
@@ -385,6 +390,14 @@ public sealed class RequestRoutingMiddleware
                     // Write body if present in initial response
                     if (response.Body != null && response.Body.Length > 0)
                     {
+                        if (DetailedStatusCodes.Contains(response.StatusCode))
+                        {
+                            var headerContentType = response.Headers.TryGetValue("Content-Type", out var contentTypeValues)
+                                ? contentTypeValues.FirstOrDefault()
+                                : null;
+                            errorBodyPreview = CreateBodyPreview(response.Body, headerContentType);
+                        }
+
                         _logger.LogDebug("Response {RequestId} writing initial body of {Length} bytes", requestId, response.Body.Length);
                         await context.Response.Body.WriteAsync(response.Body, context.RequestAborted);
                     }
@@ -405,6 +418,25 @@ public sealed class RequestRoutingMiddleware
             stopwatch.Stop();
             _logger.LogInformation("Request {RequestId} [{Host}] (mapping: {MappingName} - {MappingDomain}) completed: {StatusCode} ({Duration}ms)",
                 requestId, context.Request.Host.Value, mappingName, mappingDomain, context.Response.StatusCode, stopwatch.ElapsedMilliseconds);
+
+            if (DetailedStatusCodes.Contains(context.Response.StatusCode))
+            {
+                _logger.LogWarning(
+                    "Detailed tunnel response {RequestId}: {StatusCode} {Method} {Path} host={Host} mappingId={MappingId} mapping={MappingName} domain={MappingDomain} upstreamStatus={UpstreamStatusCode} userAgent={UserAgent} referer={Referer} remoteIp={RemoteIp} responsePreview={ResponsePreview}",
+                    requestId,
+                    context.Response.StatusCode,
+                    context.Request.Method,
+                    context.Request.Path + context.Request.QueryString,
+                    context.Request.Host.Value,
+                    mappingId,
+                    mappingName,
+                    mappingDomain,
+                    upstreamStatusCode ?? context.Response.StatusCode,
+                    context.Request.Headers.UserAgent.ToString(),
+                    context.Request.Headers.Referer.ToString(),
+                    context.Connection.RemoteIpAddress?.ToString(),
+                    errorBodyPreview ?? "(empty)");
+            }
         }
         catch (OperationCanceledException)
         {
@@ -420,7 +452,40 @@ public sealed class RequestRoutingMiddleware
         {
             _logger.LogError(ex, "Error forwarding request {RequestId}", requestId);
             await WriteErrorResponse(context, 502, "Bad Gateway", "An error occurred while processing the request");
+            _logger.LogWarning(
+                "Detailed tunnel response {RequestId}: 502 {Method} {Path} host={Host} mappingId={MappingId} mapping={MappingName} domain={MappingDomain} userAgent={UserAgent} referer={Referer} remoteIp={RemoteIp} exceptionType={ExceptionType} exceptionMessage={ExceptionMessage}",
+                requestId,
+                context.Request.Method,
+                context.Request.Path + context.Request.QueryString,
+                context.Request.Host.Value,
+                mappingId,
+                mappingName,
+                mappingDomain,
+                context.Request.Headers.UserAgent.ToString(),
+                context.Request.Headers.Referer.ToString(),
+                context.Connection.RemoteIpAddress?.ToString(),
+                ex.GetType().FullName ?? ex.GetType().Name,
+                ex.Message);
         }
+    }
+
+    private static string CreateBodyPreview(byte[] body, string? contentType)
+    {
+        if (body.Length == 0)
+            return "(empty)";
+
+        var isTextual = string.IsNullOrWhiteSpace(contentType)
+            || contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
+            || contentType.Contains("json", StringComparison.OrdinalIgnoreCase)
+            || contentType.Contains("xml", StringComparison.OrdinalIgnoreCase)
+            || contentType.Contains("javascript", StringComparison.OrdinalIgnoreCase);
+
+        if (!isTextual)
+            return $"(non-text body: {body.Length} bytes, contentType={contentType ?? "unknown"})";
+
+        var decoded = Encoding.UTF8.GetString(body);
+        var singleLine = decoded.Replace('\r', ' ').Replace('\n', ' ').Trim();
+        return singleLine.Length <= 512 ? singleLine : singleLine[..512];
     }
 
     private async Task HandleTunnelUnavailable(HttpContext context, Guid mappingId)

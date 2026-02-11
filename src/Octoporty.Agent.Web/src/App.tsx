@@ -17,6 +17,7 @@ import { DashboardPage } from './pages/Dashboard'
 import { MappingsPage } from './pages/Mappings'
 import { MappingDetailPage } from './pages/MappingDetail'
 import { GatewayPage } from './pages/Gateway'
+import { GatewayLogDetailPage } from './pages/GatewayLogDetail'
 import { CaddyConfigPage } from './pages/CaddyConfig'
 import { RequestInspectorPage } from './pages/RequestInspector'
 import { SettingsPage } from './pages/Settings'
@@ -111,6 +112,17 @@ export function App() {
               <ProtectedRoute>
                 <Layout>
                   <CaddyConfigPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/gateway/logs"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <GatewayLogDetailPage />
                 </Layout>
               </ProtectedRoute>
             }

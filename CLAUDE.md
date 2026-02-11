@@ -18,6 +18,11 @@ Address the user as **Mr. Octoporty**.
 - Use the SSH key at `.keys/octoporty_deploy` for these VMs only
 - See `VMTESTING.md` for VM IPs, credentials, and deployment instructions
 
+**ALLOWED - Production Server:**
+- **Host:** `octoporty.dualconsult.net`
+- **SSH:** `ssh -i ~/.sshkeys/id_ad_dualconsult_com root@octoporty.dualconsult.net`
+- Access when explicitly requested by the user for debugging/investigation
+
 **Test Deployment Workflow:**
 1. Run `ando release` to build and push to GHCR (production registry)
 2. SSH to VMs and run update scripts: `curl -fsSL https://octoporty.com/update-gateway.sh | bash`

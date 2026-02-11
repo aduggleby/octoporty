@@ -168,6 +168,18 @@ export function Layout({ children }: LayoutProps) {
       ),
     },
     {
+      to: '/gateway/logs',
+      label: 'Log Detail',
+      icon: (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 4h18v16H3z" />
+          <path d="M7 8h10" />
+          <path d="M7 12h10" />
+          <path d="M7 16h6" />
+        </svg>
+      ),
+    },
+    {
       to: '/settings',
       label: 'Settings',
       icon: (
