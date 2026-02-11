@@ -276,8 +276,9 @@ When you update the Agent to a newer version, it can detect that the Gateway is 
 2. When the Agent connects to the Gateway, it compares versions
 3. If the Agent is newer, a yellow banner appears in the Agent UI
 4. Click "Update Gateway" to trigger a remote update
-5. The Gateway writes a signal file that the host watcher monitors
-6. Within 30 seconds, the Gateway is automatically pulled and restarted
+5. A status modal appears showing real-time update progress, polling the Gateway every 5 seconds until the new version is confirmed
+6. The Gateway writes a signal file that the host watcher monitors
+7. Within 30 seconds, the Gateway is automatically pulled and restarted, and the modal auto-closes
 
 **Installing the Auto-Updater:**
 
