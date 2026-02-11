@@ -37,6 +37,7 @@ Octoporty is a self-hosted alternative to ngrok that lets you expose internal se
 
 - **Self-Hosted** - Full control over your infrastructure and data
 - **WebSocket Tunnel** - Efficient binary protocol with MessagePack serialization and Lz4 compression
+- **WebSocket Proxy** - End-to-end WebSocket forwarding for real-time applications (chat, live dashboards, hot reload)
 - **Automatic HTTPS** - Caddy integration provides automatic TLS certificates via Let's Encrypt
 - **Web Management UI** - React-based dashboard for managing port mappings
 - **Multi-Domain Support** - Route multiple domains to different internal services
@@ -95,10 +96,11 @@ Octoporty is a self-hosted alternative to ngrok that lets you expose internal se
 The tunnel uses WebSocket with MessagePack binary serialization and Lz4 compression for efficient data transfer.
 
 **Message Flow:**
-1. **Authentication** - Agent connects and authenticates with pre-shared API key
+1. **Authentication** - Agent connects and authenticates with pre-shared API key (includes WebSocket proxy capability negotiation)
 2. **Configuration Sync** - Agent sends its port mapping configuration to Gateway
 3. **Heartbeat Loop** - Maintains connection health with periodic pings
 4. **Request/Response** - Gateway forwards incoming HTTP requests through the tunnel
+5. **WebSocket Proxy** - Gateway detects WebSocket upgrade requests and relays frames bidirectionally through the tunnel to the internal service
 
 ## Quick Start
 

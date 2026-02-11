@@ -22,18 +22,18 @@ Think of it as a self-hosted alternative to ngrok or Cloudflare Tunnels - but yo
 
 Octoporty consists of two main components:
 
-1. **Gateway** - Deployed on a server with a public IP address (e.g., a cloud VPS). It receives incoming HTTP/HTTPS requests and routes them through the tunnel.
+1. **Gateway** - Deployed on a server with a public IP address (e.g., a cloud VPS). It receives incoming HTTP/HTTPS requests and WebSocket connections, routing them through the tunnel.
 
 2. **Agent** - Deployed inside your private network. It maintains a persistent WebSocket connection to the Gateway and forwards requests to your internal services.
 
-The tunnel uses WebSocket with MessagePack binary serialization for efficient, compressed data transfer.
+The tunnel uses WebSocket with MessagePack binary serialization for efficient, compressed data transfer. Both HTTP requests and WebSocket connections are forwarded end-to-end, enabling real-time applications like chat, live dashboards, and development servers with hot reload.
 
 ## Technology Stack
 
 **Backend:**
 - .NET 10
 - FastEndpoints (API framework)
-- Entity Framework Core (SQL Server)
+- Entity Framework Core (SQLite)
 - SignalR (WebSocket management)
 - MessagePack (binary serialization)
 - Serilog (structured logging)

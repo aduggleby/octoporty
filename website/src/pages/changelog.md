@@ -30,6 +30,15 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.48
+
+**2026-02-11**
+
+- **WebSocket Proxy Support** - Tunneled services that use WebSockets now work end-to-end through Octoporty. The Gateway detects WebSocket upgrade requests and relays frames bidirectionally through the tunnel to the internal service. Real-time applications like chat, live dashboards, and development servers with hot reload are fully supported without additional configuration
+- Capability negotiation between Gateway and Agent ensures graceful fallback when one side doesn't support WebSocket proxy (mixed-version deployments return a clear 501 error)
+
+---
+
 ## 0.9.47
 
 **2026-02-06**

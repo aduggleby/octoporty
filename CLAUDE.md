@@ -76,18 +76,20 @@ Internet → Caddy → Gateway (Hetzner) ←WebSocket→ Agent (private network)
 **Tunnel Protocol:**
 - WebSocket with MessagePack binary serialization (Lz4 compression)
 - Message types in `Octoporty.Shared/Contracts/TunnelMessages.cs`
-- Flow: Auth → ConfigSync → Heartbeat loop + Request/Response forwarding
+- Flow: Auth (with capability negotiation) → ConfigSync → Heartbeat loop + Request/Response forwarding + WebSocket proxy
+- WebSocket proxy: End-to-end WebSocket forwarding via `WebSocketOpen/OpenResult/Frame/Close` messages, with session IDs and bidirectional frame relay
 
 **Key Services:**
-- `TunnelClient` (Agent) - WebSocket client with reconnection, state machine: Disconnected→Connecting→Authenticating→Syncing→Connected
+- `TunnelClient` (Agent) - WebSocket client with reconnection, state machine: Disconnected→Connecting→Authenticating→Syncing→Connected. Handles WebSocket proxy sessions (open upstream ClientWebSocket, relay frames)
 - `TunnelConnectionManager` (Gateway) - Manages active Agent connections, routes requests by Host header
-- `RequestForwarder` (Agent) - Forwards tunnel requests to internal services via HttpClient
+- `RequestRoutingMiddleware` (Gateway) - Routes HTTP requests and WebSocket upgrade requests through the tunnel
+- `RequestForwarder` (Agent) - Forwards tunnel HTTP requests to internal services via HttpClient
 - `CaddyAdminClient` (Gateway) - Manages Caddy routes via Admin API
 - `UpdateService` (Gateway) - Handles self-update requests from Agents, writes signal files for host watcher
 
 ## Technology Stack
 
-**Backend:** .NET 10, FastEndpoints, EF Core (SQL Server), SignalR, MessagePack, Serilog
+**Backend:** .NET 10, FastEndpoints, EF Core (SQLite), SignalR, MessagePack, Serilog
 
 **Frontend:** React 19, TypeScript, Tailwind CSS 4, Vite, Motion
 
