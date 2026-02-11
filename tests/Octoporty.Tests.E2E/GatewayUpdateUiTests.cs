@@ -156,6 +156,30 @@ public class GatewayUpdateUiTests : TestBase
     }
 
     [Test]
+    public async Task GatewayUpdateBanner_UpdateAction_ShowsPendingModal()
+    {
+        await LoginAndWaitForDashboardAsync();
+
+        var updateBanner = Page.Locator("text=GATEWAY UPDATE AVAILABLE");
+        var bannerVisible = await updateBanner.IsVisibleAsync();
+
+        if (!bannerVisible)
+        {
+            Assert.Ignore("Gateway update banner not visible - cannot test pending modal");
+            return;
+        }
+
+        var updateButton = Page.Locator("button:has-text('Update Gateway')");
+        await updateButton.ClickAsync();
+
+        var pendingModalTitle = Page.Locator("text=Gateway Update Pending");
+        await pendingModalTitle.WaitForAsync(new LocatorWaitForOptions { Timeout = 5000 });
+
+        Assert.That(await pendingModalTitle.IsVisibleAsync(), Is.True,
+            "Pending update modal should appear after requesting a gateway update");
+    }
+
+    [Test]
     public async Task GatewayUpdateBanner_ShowsVersionComparison()
     {
         await LoginAndWaitForDashboardAsync();

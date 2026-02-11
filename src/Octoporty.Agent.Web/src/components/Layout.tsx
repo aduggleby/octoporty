@@ -9,9 +9,11 @@ import { motion, AnimatePresence } from 'motion/react'
 import clsx from 'clsx'
 import { ConnectionStatusBadge } from './ConnectionStatus'
 import { GatewayUpdateBanner } from './GatewayUpdateBanner'
+import { GatewayUpdatePendingModal } from './GatewayUpdatePendingModal'
+import { useToast } from '../hooks/useToast'
 import { useSignalR } from '../hooks/useSignalR'
 import { api } from '../api/client'
-import type { AgentStatus, StatusUpdate } from '../types'
+import type { AgentStatus, StatusUpdate, TriggerUpdateResponse } from '../types'
 
 interface LayoutProps {
   children: ReactNode
@@ -19,8 +21,15 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
+  const { addToast } = useToast()
   const [status, setStatus] = useState<AgentStatus | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isGatewayUpdatePending, setIsGatewayUpdatePending] = useState(false)
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+  const [isCheckingGatewayVersion, setIsCheckingGatewayVersion] = useState(false)
+  const [lastGatewayCheckAt, setLastGatewayCheckAt] = useState<Date | null>(null)
+  const [isGatewayReachable, setIsGatewayReachable] = useState<boolean | null>(null)
+  const [gatewayCheckError, setGatewayCheckError] = useState<string | null>(null)
 
   // Fetch initial status
   useEffect(() => {
@@ -42,6 +51,74 @@ export function Layout({ children }: LayoutProps) {
     api.logout()
     navigate('/login')
   }
+
+  const checkGatewayUpdateStatus = useCallback(async () => {
+    if (!isGatewayUpdatePending) {
+      return
+    }
+
+    setIsCheckingGatewayVersion(true)
+    try {
+      const latestStatus = await api.getStatus()
+      setStatus(latestStatus)
+      setGatewayCheckError(null)
+
+      const reachable = latestStatus.connectionStatus === 'Connected'
+      setIsGatewayReachable(reachable)
+
+      if (!latestStatus.gatewayUpdateAvailable) {
+        setIsGatewayUpdatePending(false)
+        setIsUpdateModalOpen(false)
+        addToast(
+          'success',
+          'Gateway Updated',
+          `Gateway is now running v${latestStatus.gatewayVersion ?? latestStatus.version}`
+        )
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to reach Agent API'
+      setIsGatewayReachable(false)
+      setGatewayCheckError(message)
+    } finally {
+      setLastGatewayCheckAt(new Date())
+      setIsCheckingGatewayVersion(false)
+    }
+  }, [addToast, isGatewayUpdatePending])
+
+  const handleUpdateTriggered = useCallback((response: TriggerUpdateResponse) => {
+    setStatus((prev) => {
+      if (!prev) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        gatewayVersion: response.gatewayVersion ?? prev.gatewayVersion,
+      }
+    })
+    setIsGatewayUpdatePending(true)
+    setIsUpdateModalOpen(true)
+    setIsCheckingGatewayVersion(false)
+    setLastGatewayCheckAt(null)
+    setIsGatewayReachable(null)
+    setGatewayCheckError(null)
+  }, [])
+
+  useEffect(() => {
+    if (!isGatewayUpdatePending) {
+      return
+    }
+
+    void checkGatewayUpdateStatus()
+
+    const intervalId = window.setInterval(() => {
+      void checkGatewayUpdateStatus()
+    }, 5000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [checkGatewayUpdateStatus, isGatewayUpdatePending])
 
   const navItems: Array<{ to: string; label: string; icon: ReactNode; end?: boolean }> = [
     {
@@ -210,10 +287,20 @@ export function Layout({ children }: LayoutProps) {
             agentVersion={status.version}
             gatewayVersion={status.gatewayVersion}
             visible={status.gatewayUpdateAvailable}
-            onUpdateTriggered={() => {
-              // Refresh status after update is triggered
-              api.getStatus().then(setStatus).catch(console.error)
-            }}
+            onUpdateTriggered={handleUpdateTriggered}
+          />
+        )}
+
+        {status && (
+          <GatewayUpdatePendingModal
+            isOpen={isGatewayUpdatePending && isUpdateModalOpen}
+            onClose={() => setIsUpdateModalOpen(false)}
+            agentVersion={status.version}
+            gatewayVersion={status.gatewayVersion}
+            isChecking={isCheckingGatewayVersion}
+            isGatewayReachable={isGatewayReachable}
+            lastCheckedAt={lastGatewayCheckAt}
+            checkError={gatewayCheckError}
           />
         )}
 

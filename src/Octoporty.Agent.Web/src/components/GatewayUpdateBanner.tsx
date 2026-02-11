@@ -7,12 +7,13 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { api } from '../api/client'
 import { useToast } from '../hooks/useToast'
+import type { TriggerUpdateResponse } from '../types'
 
 interface GatewayUpdateBannerProps {
   agentVersion: string
   gatewayVersion?: string | null
   visible: boolean
-  onUpdateTriggered?: () => void
+  onUpdateTriggered?: (response: TriggerUpdateResponse) => void
 }
 
 export function GatewayUpdateBanner({
@@ -32,7 +33,7 @@ export function GatewayUpdateBanner({
 
       if (response.success) {
         addToast('success', 'Update Queued', response.message)
-        onUpdateTriggered?.()
+        onUpdateTriggered?.(response)
         // Keep banner visible but disabled until reconnect
       } else {
         addToast('error', 'Update Failed', response.error ?? response.message)
