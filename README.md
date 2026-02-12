@@ -313,6 +313,7 @@ This installs a systemd timer that checks for update signal files every 30 secon
 | `Gateway__Port` | Gateway listening port | `17200` |
 | `Gateway__AllowRemoteUpdate` | Allow Agents to trigger Gateway self-updates | `true` |
 | `Gateway__UpdateSignalPath` | Path for update signal file | `/data/update-signal` |
+| `Gateway__RemoveRoutesOnTunnelUnavailable` | Remove Caddy routes when the tunnel is unavailable. Disabled by default to avoid Caddy reloads dropping long-lived connections (e.g., when the Agent tunnels through Caddy). | `false` |
 
 ### Agent Configuration
 
@@ -584,7 +585,7 @@ Example Agent output:
   ╚██████╔╝╚██████╗   ██║   ╚██████╔╝██║     ╚██████╔╝██║  ██║   ██║      ██║
    ╚═════╝  ╚═════╝   ╚═╝    ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═╝
 
-  Agent v0.9.54
+  Agent v0.9.55
   ─────────────────────────────────────────────────────────────────────────
   GatewayUrl       : wss://gateway.example.com/tunnel
   ApiKey           : my****ey

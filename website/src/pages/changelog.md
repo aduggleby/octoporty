@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.55
+
+**2026-02-12**
+
+- Fix automatic route cleanup that could accidentally drop active tunnel connections. Caddy route removal on tunnel unavailable is now opt-in via `Gateway__RemoveRoutesOnTunnelUnavailable` (default: `false`) to prevent Caddy reloads from dropping long-lived connections when the Agent tunnels through Caddy
+
+---
+
 ## 0.9.54
 
 **2026-02-12**

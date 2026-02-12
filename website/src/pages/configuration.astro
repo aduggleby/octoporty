@@ -7,6 +7,7 @@ const gatewayConfig = [
   { name: "Gateway__CaddyAdminUrl", required: false, default: "http://localhost:2019", desc: "URL to the Caddy Admin API. Used to dynamically configure routes." },
   { name: "Gateway__Port", required: false, default: "17200", desc: "Port the Gateway listens on for WebSocket connections from Agents." },
   { name: "Gateway__AllowedOrigins", required: false, default: "*", desc: "Comma-separated list of allowed CORS origins. Set to specific domains in production." },
+  { name: "Gateway__RemoveRoutesOnTunnelUnavailable", required: false, default: "false", desc: "Remove Caddy routes when the tunnel is unavailable. Disabled by default to avoid Caddy reloads dropping long-lived connections (e.g., when the Agent tunnels through Caddy)." },
 ];
 
 const agentConfig = [
