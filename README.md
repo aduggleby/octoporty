@@ -44,6 +44,7 @@ Octoporty is a self-hosted alternative to ngrok that lets you expose internal se
 - **Automatic Reconnection** - Agent maintains persistent connection with exponential backoff
 - **Gateway Self-Update** - Update the Gateway from the Agent UI when version mismatch is detected
 - **Customizable Landing Page** - Edit the HTML shown when no mapping exists for a domain
+- **Agent Logs** - Real-time streaming of Agent process logs in the Web UI with historical retrieval
 - **Request Logging** - Audit trail for all tunneled requests
 - **Rate Limiting** - Built-in protection against brute force attacks
 - **Startup Banner** - Visual configuration display at startup with obfuscated secrets for easy verification
@@ -321,6 +322,7 @@ This installs a systemd timer that checks for update signal files every 30 secon
 | `Agent__JwtSecret` | JWT signing key (min 32 chars) | Required |
 | `Agent__Auth__PasswordHash` | SHA-512 crypt hash for Web UI login (generate with `openssl passwd -6`) | Required |
 | `Agent__Port` | Agent web UI port | `17201` |
+| `Logging__FilePath` | Rolling log file path for Agent log streaming | `/var/log/octoporty/agent-.log` |
 | `ConnectionStrings__DefaultConnection` | Database connection string | SQLite at `/app/data/octoporty.db` |
 
 ### Port Assignments
@@ -364,6 +366,7 @@ The Agent includes an embedded React web application for managing port mappings.
 - **Settings** - Customize the Gateway landing page with your own HTML and branding
 - **Gateway Logs** - Real-time streaming of Gateway logs with historical log retrieval and infinite scroll
 - **Gateway Log Detail** - Detailed log inspection view with search, level filtering, and full message payload display for debugging tunnel issues
+- **Agent Logs** - Real-time streaming of Agent process logs with level filtering, auto-scroll, and infinite scroll for historical entries
 - **Caddy Configuration** - View the current Caddy reverse proxy configuration for debugging and monitoring
 - **Connection Logs** - View connection history and status
 - **Request Logs** - Audit trail of all tunneled requests
@@ -458,6 +461,12 @@ dotnet test --filter "FullyQualifiedName~ComprehensiveUi"
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/v1/gateway/caddy-config` | Get current Caddy reverse proxy configuration from the Gateway |
+
+### Agent Logs API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/agent/logs` | Get Agent process logs with pagination (`beforeId`, `count` query params) |
 
 ### Diagnostics API
 
@@ -560,7 +569,7 @@ Example Agent output:
   ╚██████╔╝╚██████╗   ██║   ╚██████╔╝██║     ╚██████╔╝██║  ██║   ██║      ██║
    ╚═════╝  ╚═════╝   ╚═╝    ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═╝
 
-  Agent v0.9.50
+  Agent v0.9.51
   ─────────────────────────────────────────────────────────────────────────
   GatewayUrl       : wss://gateway.example.com/tunnel
   ApiKey           : my****ey

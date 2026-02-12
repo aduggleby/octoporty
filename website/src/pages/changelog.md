@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.51
+
+**2026-02-12**
+
+- **Agent Logs** - New page in the Agent web UI for viewing Agent process logs in real time. A background service tails the Serilog rolling file and streams new entries via SignalR, while historical logs are available through a paginated API with infinite scroll. Includes level filtering (Debug/Info/Warning/Error), auto-scroll, and a clear button. Logs are buffered in memory (up to 10,000 entries) and the log directory is validated at startup with clear error messages if not writable
+
+---
+
 ## 0.9.50
 
 **2026-02-11**

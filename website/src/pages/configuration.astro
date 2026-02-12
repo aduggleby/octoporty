@@ -20,6 +20,7 @@ const agentConfig = [
   { name: "Agent__HeartbeatIntervalSeconds", required: false, default: "30", desc: "Interval between heartbeat messages to keep the tunnel alive." },
   { name: "Agent__ReconnectDelaySeconds", required: false, default: "5", desc: "Initial delay before attempting reconnection after disconnect." },
   { name: "Agent__MaxReconnectDelaySeconds", required: false, default: "300", desc: "Maximum delay between reconnection attempts (exponential backoff cap)." },
+  { name: "Logging__FilePath", required: false, default: "/var/log/octoporty/agent-.log", desc: "Rolling log file path. Required for the Agent Logs UI. The directory must be writable by the container." },
 ];
 
 const portAssignments = [

@@ -91,6 +91,8 @@ Internet → Caddy → Gateway (Hetzner) ←WebSocket→ Agent (private network)
 - `RequestForwarder` (Agent) - Forwards tunnel HTTP requests to internal services via HttpClient
 - `CaddyAdminClient` (Gateway) - Manages Caddy routes via Admin API
 - `UpdateService` (Gateway) - Handles self-update requests from Agents, writes signal files for host watcher
+- `AgentLogTailService` (Agent) - Background service that tails the Serilog rolling log file and feeds AgentLogBuffer + SignalR
+- `AgentLogBuffer` (Agent) - In-memory circular buffer (10k entries) of parsed Agent log entries for the web UI
 
 ## Technology Stack
 
@@ -278,6 +280,7 @@ Environment variables (see `.env.example`):
 - `Agent__ApiKey` / `Gateway__ApiKey` - Shared secret
 - `Agent__JwtSecret` - JWT signing (min 32 chars)
 - `Agent__Auth__PasswordHash` - SHA-512 crypt hash for Web UI login (generate with `openssl passwd -6 "password"`)
+- `Logging__FilePath` - Rolling log file path for Agent log streaming UI (default: `/var/log/octoporty/agent-.log`)
 - `Gateway__CaddyAdminUrl` - Caddy Admin API endpoint
 - `Gateway__GatewayFqdn` - Optional, Gateway's own FQDN for landing page (auto-derived from Agent if not set)
 
