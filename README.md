@@ -48,6 +48,8 @@ Octoporty is a self-hosted alternative to ngrok that lets you expose internal se
 - **Request Logging** - Audit trail for all tunneled requests
 - **Rate Limiting** - Built-in protection against brute force attacks
 - **Startup Banner** - Visual configuration display at startup with obfuscated secrets for easy verification
+- **Import/Export** - Export and import port mapping definitions as JSON for backup, migration, or sharing between Agents
+- **SQLite Backup** - Download a consistent SQLite database backup from the Web UI
 - **Automatic Database Setup** - Agent auto-applies migrations on startup, no manual database setup required
 - **Docker Ready** - Multi-arch container images (amd64/arm64) with minimal attack surface
 
@@ -367,6 +369,7 @@ The Agent includes an embedded React web application for managing port mappings.
 - **Gateway Logs** - Real-time streaming of Gateway logs with historical log retrieval and infinite scroll
 - **Gateway Log Detail** - Detailed log inspection view with search, level filtering, and full message payload display for debugging tunnel issues
 - **Agent Logs** - Real-time streaming of Agent process logs with level filtering, auto-scroll, and infinite scroll for historical entries
+- **Import/Export** - Export and import port mapping definitions as JSON, or download a full SQLite database backup
 - **Caddy Configuration** - View the current Caddy reverse proxy configuration for debugging and monitoring
 - **Connection Logs** - View connection history and status
 - **Request Logs** - Audit trail of all tunneled requests
@@ -467,6 +470,14 @@ dotnet test --filter "FullyQualifiedName~ComprehensiveUi"
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/v1/agent/logs` | Get Agent process logs with pagination (`beforeId`, `count` query params) |
+
+### Import/Export API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/import-export/export` | Export port mappings and landing page as JSON |
+| POST | `/api/v1/import-export/import` | Import port mappings from JSON (merge-only: upserts by domain, does not delete) |
+| GET | `/api/v1/import-export/sqlite` | Download a consistent SQLite database backup |
 
 ### Diagnostics API
 
@@ -573,7 +584,7 @@ Example Agent output:
   ╚██████╔╝╚██████╗   ██║   ╚██████╔╝██║     ╚██████╔╝██║  ██║   ██║      ██║
    ╚═════╝  ╚═════╝   ╚═╝    ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═╝
 
-  Agent v0.9.52
+  Agent v0.9.53
   ─────────────────────────────────────────────────────────────────────────
   GatewayUrl       : wss://gateway.example.com/tunnel
   ApiKey           : my****ey

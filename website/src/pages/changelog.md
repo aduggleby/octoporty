@@ -30,6 +30,15 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.53
+
+**2026-02-12**
+
+- **Import/Export** - Export and import port mapping definitions as JSON for easy backup, migration, or sharing between Agents
+- Add SQLite database backup download for complete data protection
+
+---
+
 ## 0.9.52
 
 **2026-02-12**
