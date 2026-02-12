@@ -8,7 +8,9 @@ using System.Diagnostics;
 using System.Text;
 using System.Net.WebSockets;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.Options;
 using Octoporty.Shared.Contracts;
+using Octoporty.Shared.Options;
 
 namespace Octoporty.Gateway.Services;
 
@@ -18,6 +20,7 @@ public sealed class RequestRoutingMiddleware
     private readonly ITunnelConnectionManager _connectionManager;
     private readonly ICaddyAdminClient _caddyClient;
     private readonly ILogger<RequestRoutingMiddleware> _logger;
+    private readonly GatewayOptions _options;
 
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
     private const int MaxBodySize = 10 * 1024 * 1024; // 10MB
@@ -30,11 +33,13 @@ public sealed class RequestRoutingMiddleware
         RequestDelegate next,
         ITunnelConnectionManager connectionManager,
         ICaddyAdminClient caddyClient,
+        IOptions<GatewayOptions> options,
         ILogger<RequestRoutingMiddleware> logger)
     {
         _next = next;
         _connectionManager = connectionManager;
         _caddyClient = caddyClient;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -492,14 +497,19 @@ public sealed class RequestRoutingMiddleware
     {
         _logger.LogWarning("Tunnel unavailable for mapping {MappingId}, triggering self-healing", mappingId);
 
-        // Self-healing: remove the route from Caddy since tunnel is down
-        try
+        // Optional self-healing: remove the route from Caddy since the tunnel is down.
+        // Disabled by default because mutating Caddy config can trigger reloads which drop
+        // long-lived connections (including the Agent tunnel when proxied through Caddy).
+        if (_options.RemoveRoutesOnTunnelUnavailable)
         {
-            await _caddyClient.RemoveRouteAsync(mappingId, CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to remove Caddy route during self-healing for {MappingId}", mappingId);
+            try
+            {
+                await _caddyClient.RemoveRouteAsync(mappingId, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to remove Caddy route during self-healing for {MappingId}", mappingId);
+            }
         }
 
         await WriteErrorResponse(context, 503, "Service Unavailable", "The tunnel connection is not available");

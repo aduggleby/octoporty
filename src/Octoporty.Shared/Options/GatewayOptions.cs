@@ -11,6 +11,13 @@ public class GatewayOptions
     public string CaddyAdminUrl { get; set; } = "http://localhost:17202";
     public int ListenPort { get; set; } = 17200;
     public bool DebugJson { get; set; }
+    // When true, the Gateway will DELETE the corresponding Caddy route if a request arrives
+    // and there is no active tunnel for that mapping.
+    //
+    // This can be dangerous when the Agent connects via Caddy (wss://... through reverse_proxy),
+    // because Caddy config mutations can trigger reloads that drop existing connections.
+    // Default: false.
+    public bool RemoveRoutesOnTunnelUnavailable { get; set; }
 
     /// <summary>
     /// Path to write the update signal file. The host watcher monitors this file
