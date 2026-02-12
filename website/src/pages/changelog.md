@@ -30,6 +30,16 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.52
+
+**2026-02-12**
+
+- Fix request forwarding to correctly translate between the web UI and the tunnel protocol
+- Improve forwarding error messages with a TLS mismatch hint when a mapping is set to HTTPS but the upstream speaks plain HTTP
+- Fix internal HTTP client to not follow redirects, correctly passing them through to the external client
+
+---
+
 ## 0.9.51
 
 **2026-02-12**

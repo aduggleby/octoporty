@@ -528,6 +528,10 @@ The password is verified against the SHA-512 crypt hash configured in `Agent__Au
 4. Review Agent logs for forwarding errors
 5. Ensure internal host is resolvable from Agent container
 
+### "Bad Gateway" with TLS frame errors
+
+If you see an error like `Cannot determine the frame size` or `corrupted frame`, the mapping is likely set to HTTPS but the upstream service is speaking plain HTTP (or the port is wrong). Change the mapping's internal protocol to HTTP or fix the port.
+
 ### Web UI login fails
 
 1. Verify password hash is set correctly (generate with `openssl passwd -6 "your-password"`)
@@ -569,7 +573,7 @@ Example Agent output:
   ╚██████╔╝╚██████╗   ██║   ╚██████╔╝██║     ╚██████╔╝██║  ██║   ██║      ██║
    ╚═════╝  ╚═════╝   ╚═╝    ╚═════╝ ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═╝
 
-  Agent v0.9.51
+  Agent v0.9.52
   ─────────────────────────────────────────────────────────────────────────
   GatewayUrl       : wss://gateway.example.com/tunnel
   ApiKey           : my****ey
