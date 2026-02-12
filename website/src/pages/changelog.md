@@ -30,6 +30,14 @@ curl -fsSL https://octoporty.com/update-agent.sh | bash
 
 ---
 
+## 0.9.54
+
+**2026-02-12**
+
+- Show a pending update modal when the Gateway is updating, with automatic version polling until the update completes
+
+---
+
 ## 0.9.53
 
 **2026-02-12**
