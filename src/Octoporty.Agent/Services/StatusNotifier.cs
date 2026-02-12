@@ -51,4 +51,14 @@ public class StatusNotifier
 
         await _hubContext.Clients.All.GatewayLog(log);
     }
+
+    public async Task NotifyAgentLogAsync(DateTime timestamp, string level, string message)
+    {
+        var log = new AgentLogMessageDto(
+            Timestamp: timestamp,
+            Level: level,
+            Message: message);
+
+        await _hubContext.Clients.All.AgentLog(log);
+    }
 }

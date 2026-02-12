@@ -146,7 +146,7 @@ export function Layout({ children }: LayoutProps) {
     },
     {
       to: '/gateway',
-      label: 'Gateway',
+      label: 'Gateway Logs',
       // Use end: true to prevent this from matching /gateway/inspector
       end: true,
       icon: (
@@ -168,8 +168,8 @@ export function Layout({ children }: LayoutProps) {
       ),
     },
     {
-      to: '/gateway/logs',
-      label: 'Log Detail',
+      to: '/logs/agent',
+      label: 'Agent Logs',
       icon: (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 4h18v16H3z" />

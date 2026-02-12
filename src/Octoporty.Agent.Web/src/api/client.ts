@@ -12,6 +12,7 @@ import type {
   ApiError,
   TriggerUpdateResponse,
   GetLogsResponse,
+  GetAgentLogsResponse,
   LandingPageResponse,
   UpdateLandingPageResponse,
   DiagnoseResponse,
@@ -127,6 +128,14 @@ class ApiClient {
     if (count !== 1000) params.set('count', count.toString())
     const queryString = params.toString()
     return this.request<GetLogsResponse>(`/gateway/logs${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async getAgentLogs(beforeId: number = 0, count: number = 1000): Promise<GetAgentLogsResponse> {
+    const params = new URLSearchParams()
+    if (beforeId > 0) params.set('beforeId', beforeId.toString())
+    if (count !== 1000) params.set('count', count.toString())
+    const queryString = params.toString()
+    return this.request<GetAgentLogsResponse>(`/agent/logs${queryString ? `?${queryString}` : ''}`)
   }
 
   // ─────────────────────────────────────────────────────────────────────────

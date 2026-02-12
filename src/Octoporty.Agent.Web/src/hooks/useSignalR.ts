@@ -11,12 +11,13 @@ import {
   HubConnectionState,
   LogLevel,
 } from '@microsoft/signalr'
-import type { StatusUpdate, MappingStatusUpdate, GatewayLog } from '../types'
+import type { StatusUpdate, MappingStatusUpdate, GatewayLog, AgentLog } from '../types'
 
 interface UseSignalROptions {
   onStatusUpdate?: (update: StatusUpdate) => void
   onMappingUpdate?: (update: MappingStatusUpdate) => void
   onGatewayLog?: (log: GatewayLog) => void
+  onAgentLog?: (log: AgentLog) => void
   onReconnecting?: () => void
   onReconnected?: () => void
   onDisconnected?: (error?: Error) => void
@@ -36,10 +37,12 @@ let subscriberCount = 0
 type StatusCallback = (update: StatusUpdate) => void
 type MappingCallback = (update: MappingStatusUpdate) => void
 type GatewayLogCallback = (log: GatewayLog) => void
+type AgentLogCallback = (log: AgentLog) => void
 
 const statusSubscribers = new Set<StatusCallback>()
 const mappingSubscribers = new Set<MappingCallback>()
 const gatewayLogSubscribers = new Set<GatewayLogCallback>()
+const agentLogSubscribers = new Set<AgentLogCallback>()
 
 export function useSignalR(options: UseSignalROptions = {}): UseSignalRReturn {
   const [connectionState, setConnectionState] = useState<HubConnectionState>(
@@ -65,10 +68,14 @@ export function useSignalR(options: UseSignalROptions = {}): UseSignalRReturn {
     const gatewayLogCallback: GatewayLogCallback = (log) => {
       optionsRef.current.onGatewayLog?.(log)
     }
+    const agentLogCallback: AgentLogCallback = (log) => {
+      optionsRef.current.onAgentLog?.(log)
+    }
 
     statusSubscribers.add(statusCallback)
     mappingSubscribers.add(mappingCallback)
     gatewayLogSubscribers.add(gatewayLogCallback)
+    agentLogSubscribers.add(agentLogCallback)
     subscriberCount++
 
     // Create connection if this is the first subscriber
@@ -101,6 +108,10 @@ export function useSignalR(options: UseSignalROptions = {}): UseSignalRReturn {
 
       connection.on('GatewayLog', (log: GatewayLog) => {
         gatewayLogSubscribers.forEach((cb) => cb(log))
+      })
+
+      connection.on('AgentLog', (log: AgentLog) => {
+        agentLogSubscribers.forEach((cb) => cb(log))
       })
 
       connection.onreconnecting((error) => {
@@ -147,6 +158,7 @@ export function useSignalR(options: UseSignalROptions = {}): UseSignalRReturn {
       statusSubscribers.delete(statusCallback)
       mappingSubscribers.delete(mappingCallback)
       gatewayLogSubscribers.delete(gatewayLogCallback)
+      agentLogSubscribers.delete(agentLogCallback)
       subscriberCount--
       clearInterval(stateInterval)
 

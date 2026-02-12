@@ -33,12 +33,49 @@ builder.Configuration
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
     .AddEnvironmentVariables();
 
+// Ensure the Agent always logs to a rolling file by default.
+// This path is required for the Agent Logs UI (SignalR streaming + history endpoint).
+const string DefaultAgentLogFilePath = "/var/log/octoporty/agent-.log";
+if (string.IsNullOrWhiteSpace(builder.Configuration["Logging:FilePath"]))
+{
+    builder.Configuration["Logging:FilePath"] = DefaultAgentLogFilePath;
+}
+
 builder.Host.UseOctoportySerilog("Octoporty.Agent");
 
 // Configuration
 var agentOptions = builder.Configuration.GetSection("Agent").Get<AgentOptions>() ?? new AgentOptions();
 builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("Agent"));
 builder.Services.Configure<LoggingOptions>(builder.Configuration.GetSection("Logging"));
+
+// Validate log directory exists and is writable early so log streaming works reliably.
+var agentLogPath = builder.Configuration["Logging:FilePath"];
+if (!string.IsNullOrWhiteSpace(agentLogPath))
+{
+    var logDir = Path.GetDirectoryName(agentLogPath);
+    if (!string.IsNullOrWhiteSpace(logDir))
+    {
+        if (!Directory.Exists(logDir))
+        {
+            Directory.CreateDirectory(logDir);
+        }
+
+        var testFile = Path.Combine(logDir, $".write-test-{Guid.NewGuid()}");
+        try
+        {
+            File.WriteAllText(testFile, "test");
+            File.Delete(testFile);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Log directory '{logDir}' is not writable. " +
+                $"The Agent requires this to write rolling logs and to stream them to the web UI. " +
+                $"Ensure the container user has write access (see startup banner UID/GID). " +
+                $"Error: {ex.Message}");
+        }
+    }
+}
 
 // CRITICAL-03: Validate JWT secret is at least 32 characters
 if (string.IsNullOrWhiteSpace(agentOptions.JwtSecret) || agentOptions.JwtSecret.Length < 32)
@@ -243,6 +280,10 @@ builder.Services.AddFastEndpoints();
 // SignalR
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<StatusNotifier>();
+
+// Agent log streaming (tails Serilog file output into an in-memory buffer)
+builder.Services.AddSingleton<AgentLogBuffer>();
+builder.Services.AddHostedService<AgentLogTailService>();
 
 // Landing page service (uses DbContextFactory for non-request contexts)
 builder.Services.AddSingleton<LandingPageService>();

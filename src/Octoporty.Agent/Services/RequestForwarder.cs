@@ -7,6 +7,7 @@
 using System.Net.Security;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading.Channels;
 using Microsoft.EntityFrameworkCore;
 using Octoporty.Agent.Data;
@@ -174,24 +175,35 @@ public class RequestForwarder
         };
     }
 
-    public async IAsyncEnumerable<TunnelMessage> ForwardStreamingAsync(
-        RequestMessage request,
-        [EnumeratorCancellation] CancellationToken ct)
+    public IAsyncEnumerable<TunnelMessage> ForwardStreamingAsync(RequestMessage request, CancellationToken ct)
     {
-        var mapping = await _db.PortMappings.FindAsync([request.MappingId], ct);
-
-        if (mapping == null || !mapping.IsEnabled)
+        // C# async iterators cannot `yield` inside try/catch blocks. We use a channel-backed producer so we can
+        // stream chunks and still handle exceptions (notably TLS handshake failures) with actionable logs.
+        var channel = Channel.CreateUnbounded<TunnelMessage>(new UnboundedChannelOptions
         {
-            _logger.LogWarning("Mapping {MappingId} not found or disabled", request.MappingId);
-            yield return CreateErrorResponse(request.RequestId, 404, "Mapping not found");
-            yield break;
-        }
+            SingleReader = true,
+            SingleWriter = true
+        });
 
-        var client = CreateHttpClient(mapping);
+        _ = ProduceAsync(channel.Writer, request, ct);
+        return channel.Reader.ReadAllAsync(ct);
+    }
 
+    private async Task ProduceAsync(ChannelWriter<TunnelMessage> writer, RequestMessage request, CancellationToken ct)
+    {
         HttpResponseMessage? httpResponse = null;
         try
         {
+            var mapping = await _db.PortMappings.FindAsync([request.MappingId], ct);
+
+            if (mapping == null || !mapping.IsEnabled)
+            {
+                _logger.LogWarning("Mapping {MappingId} not found or disabled", request.MappingId);
+                await writer.WriteAsync(CreateErrorResponse(request.RequestId, 404, "Mapping not found"), ct);
+                return;
+            }
+
+            var client = CreateHttpClient(mapping);
             var httpRequest = CreateHttpRequest(request, mapping);
             var startTime = DateTime.UtcNow;
 
@@ -212,7 +224,6 @@ public class RequestForwarder
             foreach (var (key, values) in httpResponse.Content.Headers)
             {
                 headers[key] = values.ToArray();
-                // Log Content-Type specifically for debugging
                 if (string.Equals(key, "Content-Type", StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogDebug("Request {RequestId} streaming response Content-Type from upstream: {ContentType}",
@@ -220,43 +231,38 @@ public class RequestForwarder
                 }
             }
 
-            // Log if Content-Type is missing
             if (!headers.ContainsKey("Content-Type"))
             {
                 _logger.LogWarning("Request {RequestId} streaming response has no Content-Type header for path: {Path}",
                     request.RequestId, request.Path);
             }
 
-            // Check content length to determine if we should stream
             var contentLength = httpResponse.Content.Headers.ContentLength;
             var shouldStream = contentLength == null || contentLength > StreamingThreshold;
 
             if (!shouldStream)
             {
-                // Small response - send as single message
                 var body = await httpResponse.Content.ReadAsByteArrayAsync(ct);
-                yield return new ResponseMessage
+                await writer.WriteAsync(new ResponseMessage
                 {
                     RequestId = request.RequestId,
                     StatusCode = (int)httpResponse.StatusCode,
                     Headers = headers,
                     Body = body,
                     HasMoreBody = false
-                };
-                yield break;
+                }, ct);
+                return;
             }
 
-            // Large response - stream in chunks
-            yield return new ResponseMessage
+            await writer.WriteAsync(new ResponseMessage
             {
                 RequestId = request.RequestId,
                 StatusCode = (int)httpResponse.StatusCode,
                 Headers = headers,
                 Body = null,
                 HasMoreBody = true
-            };
+            }, ct);
 
-            // Stream body chunks
             await using var stream = await httpResponse.Content.ReadAsStreamAsync(ct);
             var buffer = new byte[ChunkSize];
             int bytesRead;
@@ -268,29 +274,82 @@ public class RequestForwarder
                 var chunk = buffer.AsSpan(0, bytesRead).ToArray();
                 var hasMore = contentLength == null || totalBytesRead < contentLength;
 
-                yield return new ResponseBodyChunkMessage
+                await writer.WriteAsync(new ResponseBodyChunkMessage
                 {
                     RequestId = request.RequestId,
                     Data = chunk,
                     IsFinal = !hasMore
-                };
+                }, ct);
             }
 
-            // Ensure we send a final chunk marker if we didn't send one
             if (contentLength == null || totalBytesRead < contentLength)
             {
-                yield return new ResponseBodyChunkMessage
+                await writer.WriteAsync(new ResponseBodyChunkMessage
                 {
                     RequestId = request.RequestId,
                     Data = [],
                     IsFinal = true
-                };
+                }, ct);
             }
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "Streaming forward failed for requestId={RequestId} method={Method} path={Path}. Cause: {Cause}",
+                request.RequestId, request.Method, request.Path, FormatExceptionChain(ex));
+
+            await writer.WriteAsync(CreateErrorResponse(request.RequestId, 502, CreateSafeBadGatewayMessage(ex)), ct);
+        }
+        catch (TaskCanceledException)
+        {
+            await writer.WriteAsync(CreateErrorResponse(request.RequestId, 504, "Gateway Timeout"), ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error streaming forward for request {RequestId}", request.RequestId);
+            await writer.WriteAsync(CreateErrorResponse(request.RequestId, 502, "Bad Gateway: upstream service unavailable"), ct);
         }
         finally
         {
             httpResponse?.Dispose();
+            writer.TryComplete();
         }
+    }
+
+    private static string FormatExceptionChain(Exception ex)
+    {
+        var sb = new StringBuilder();
+        var current = ex;
+        var depth = 0;
+        while (current != null && depth < 6)
+        {
+            if (depth > 0)
+                sb.Append(" -> ");
+            sb.Append(current.GetType().Name);
+            if (!string.IsNullOrWhiteSpace(current.Message))
+            {
+                sb.Append(": ");
+                sb.Append(current.Message);
+            }
+            current = current.InnerException!;
+            depth++;
+        }
+        return sb.ToString();
+    }
+
+    private static string CreateSafeBadGatewayMessage(HttpRequestException ex)
+    {
+        // HttpRequestException.Message is already what we showed before.
+        // Add a short inner hint when available so the user gets something more actionable.
+        var inner = ex.InnerException;
+        if (inner == null || string.IsNullOrWhiteSpace(inner.Message))
+            return "Bad Gateway: upstream service unavailable";
+
+        var hint = $"{inner.GetType().Name}: {inner.Message}";
+        hint = hint.Replace('\r', ' ').Replace('\n', ' ').Trim();
+        if (hint.Length > 300)
+            hint = hint[..300];
+
+        return $"Bad Gateway: {ex.Message} (inner: {hint})";
     }
 }
 

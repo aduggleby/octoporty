@@ -89,6 +89,13 @@ export interface GatewayLog {
   message: string
 }
 
+// Agent Log types
+export interface AgentLog {
+  timestamp: string
+  level: LogLevel
+  message: string
+}
+
 // Gateway Logs API types
 export interface GetLogsResponse {
   success: boolean
@@ -97,7 +104,21 @@ export interface GetLogsResponse {
   hasMore: boolean
 }
 
+export interface GetAgentLogsResponse {
+  success: boolean
+  error?: string
+  logs: AgentLogItem[]
+  hasMore: boolean
+}
+
 export interface GatewayLogItem {
+  id: number
+  timestamp: string
+  level: LogLevel
+  message: string
+}
+
+export interface AgentLogItem {
   id: number
   timestamp: string
   level: LogLevel

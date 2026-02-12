@@ -36,9 +36,15 @@ public interface IStatusHubClient
     Task StatusUpdate(StatusUpdateMessage update);
     Task MappingStatusUpdate(MappingStatusUpdateMessage update);
     Task GatewayLog(GatewayLogMessageDto log);
+    Task AgentLog(AgentLogMessageDto log);
 }
 
 public record GatewayLogMessageDto(
+    DateTime Timestamp,
+    string Level,
+    string Message);
+
+public record AgentLogMessageDto(
     DateTime Timestamp,
     string Level,
     string Message);
