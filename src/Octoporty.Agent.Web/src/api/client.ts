@@ -151,16 +151,38 @@ class ApiClient {
   }
 
   async createMapping(mapping: CreateMappingRequest): Promise<PortMapping> {
+    // Transform UI model to Agent API contract.
+    // UI uses: internalProtocol, allowInvalidCertificates, enabled, name
+    // API expects: internalUseTls, allowSelfSignedCerts, isEnabled, description
+    const body = {
+      externalDomain: mapping.externalDomain,
+      internalHost: mapping.internalHost,
+      internalPort: mapping.internalPort,
+      internalUseTls: mapping.internalProtocol === 'Https',
+      allowSelfSignedCerts: mapping.allowInvalidCertificates ?? false,
+      isEnabled: mapping.enabled ?? true,
+      description: mapping.name,
+    }
     return this.request<PortMapping>('/mappings', {
       method: 'POST',
-      body: JSON.stringify(mapping),
+      body: JSON.stringify(body),
     })
   }
 
   async updateMapping(mapping: UpdateMappingRequest): Promise<PortMapping> {
+    const body = {
+      id: mapping.id,
+      externalDomain: mapping.externalDomain,
+      internalHost: mapping.internalHost,
+      internalPort: mapping.internalPort,
+      internalUseTls: mapping.internalProtocol === 'Https',
+      allowSelfSignedCerts: mapping.allowInvalidCertificates ?? false,
+      isEnabled: mapping.enabled ?? true,
+      description: mapping.name,
+    }
     return this.request<PortMapping>(`/mappings/${mapping.id}`, {
       method: 'PUT',
-      body: JSON.stringify(mapping),
+      body: JSON.stringify(body),
     })
   }
 

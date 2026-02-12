@@ -192,9 +192,10 @@ public class RequestForwarder
     private async Task ProduceAsync(ChannelWriter<TunnelMessage> writer, RequestMessage request, CancellationToken ct)
     {
         HttpResponseMessage? httpResponse = null;
+        PortMapping? mapping = null;
         try
         {
-            var mapping = await _db.PortMappings.FindAsync([request.MappingId], ct);
+            mapping = await _db.PortMappings.FindAsync([request.MappingId], ct);
 
             if (mapping == null || !mapping.IsEnabled)
             {
@@ -211,8 +212,16 @@ public class RequestForwarder
             httpResponse = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
 
             var duration = DateTime.UtcNow - startTime;
-            _logger.LogInformation("Forwarded {Method} {Path} to {Host}:{Port} -> {Status} ({Duration}ms, streaming)",
-                request.Method, request.Path, mapping.InternalHost, mapping.InternalPort,
+            _logger.LogInformation(
+                "Forwarded {Method} {Path} mappingId={MappingId} external={ExternalDomain} to {Scheme}://{Host}:{Port} (allowInvalidCerts={AllowInvalidCerts}) -> {Status} ({Duration}ms, streaming)",
+                request.Method,
+                request.Path,
+                mapping.Id,
+                mapping.ExternalDomain,
+                mapping.InternalUseTls ? "https" : "http",
+                mapping.InternalHost,
+                mapping.InternalPort,
+                mapping.AllowSelfSignedCerts,
                 (int)httpResponse.StatusCode, duration.TotalMilliseconds);
 
             // Build headers
@@ -294,8 +303,17 @@ public class RequestForwarder
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogWarning(ex, "Streaming forward failed for requestId={RequestId} method={Method} path={Path}. Cause: {Cause}",
-                request.RequestId, request.Method, request.Path, FormatExceptionChain(ex));
+            var mappingInfo = mapping == null
+                ? $"mappingId={request.MappingId}"
+                : $"mappingId={mapping.Id} external={mapping.ExternalDomain} target={(mapping.InternalUseTls ? "https" : "http")}://{mapping.InternalHost}:{mapping.InternalPort} allowInvalidCerts={mapping.AllowSelfSignedCerts}";
+
+            _logger.LogWarning(ex,
+                "Streaming forward failed ({MappingInfo}) requestId={RequestId} method={Method} path={Path}. Cause: {Cause}",
+                mappingInfo,
+                request.RequestId,
+                request.Method,
+                request.Path,
+                FormatExceptionChain(ex));
 
             await writer.WriteAsync(CreateErrorResponse(request.RequestId, 502, CreateSafeBadGatewayMessage(ex)), ct);
         }
@@ -349,6 +367,13 @@ public class RequestForwarder
         if (hint.Length > 300)
             hint = hint[..300];
 
+        // Special-case common TLS symptom: HTTPS to a plaintext HTTP port (or wrong port).
+        if (hint.Contains("Cannot determine the frame size", StringComparison.OrdinalIgnoreCase) ||
+            hint.Contains("corrupted frame", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"Bad Gateway: {ex.Message} (inner: {hint}). Hint: this usually means the mapping is set to HTTPS but the upstream is speaking plain HTTP (or the port is wrong).";
+        }
+
         return $"Bad Gateway: {ex.Message} (inner: {hint})";
     }
 }
@@ -361,6 +386,9 @@ public static class HttpClientExtensions
         services.AddHttpClient("InternalServices")
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
+                // Behave like a reverse proxy: pass redirects through instead of following them.
+                // Following redirects can accidentally switch schemes/ports (e.g., https://...:8080) and surface as TLS frame errors.
+                AllowAutoRedirect = false,
                 PooledConnectionLifetime = TimeSpan.FromMinutes(5),
                 MaxConnectionsPerServer = 100,
                 ConnectTimeout = TimeSpan.FromSeconds(10)
@@ -371,6 +399,7 @@ public static class HttpClientExtensions
         services.AddHttpClient("InternalServices-Insecure")
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
+                AllowAutoRedirect = false,
                 PooledConnectionLifetime = TimeSpan.FromMinutes(5),
                 MaxConnectionsPerServer = 100,
                 ConnectTimeout = TimeSpan.FromSeconds(10),
