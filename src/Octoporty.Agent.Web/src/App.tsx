@@ -21,6 +21,7 @@ import { AgentLogsPage } from './pages/AgentLogs'
 import { CaddyConfigPage } from './pages/CaddyConfig'
 import { RequestInspectorPage } from './pages/RequestInspector'
 import { SettingsPage } from './pages/Settings'
+import { ImportExportPage } from './pages/ImportExport'
 import { api } from './api/client'
 import type { ReactNode } from 'react'
 
@@ -145,6 +146,17 @@ export function App() {
               <ProtectedRoute>
                 <Layout>
                   <SettingsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/import-export"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ImportExportPage />
                 </Layout>
               </ProtectedRoute>
             }

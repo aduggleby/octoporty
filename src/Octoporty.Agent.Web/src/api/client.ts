@@ -16,6 +16,9 @@ import type {
   LandingPageResponse,
   UpdateLandingPageResponse,
   DiagnoseResponse,
+  AgentDefinitionsExportV1,
+  AgentDefinitionsImportV1,
+  AgentDefinitionsImportResponse,
 } from '../types'
 
 const API_BASE = '/api/v1'
@@ -33,8 +36,13 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
+    }
+
+    // Only set Content-Type when we actually have a JSON body.
+    // Setting it on GET/DELETE with an empty body can cause some servers to attempt JSON parsing and fail with 400.
+    if (options.body !== undefined && !(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json'
     }
 
     if (this.token) {
@@ -65,6 +73,43 @@ class ApiClient {
     }
 
     return response.json()
+  }
+
+  private async requestRaw(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<Response> {
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string>),
+    }
+
+    if (options.body !== undefined && !(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json'
+    }
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`
+    }
+
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers,
+    })
+
+    if (response.status === 401) {
+      this.clearToken()
+      window.location.href = '/login'
+      throw new Error('Unauthorized')
+    }
+
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        message: 'An unexpected error occurred',
+      }))
+      throw error
+    }
+
+    return response
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -235,6 +280,32 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ url, maxBodyBytes }),
     })
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Import / Export
+  // ─────────────────────────────────────────────────────────────────────────
+
+  async exportDefinitions(): Promise<AgentDefinitionsExportV1> {
+    return this.request<AgentDefinitionsExportV1>('/import-export/export')
+  }
+
+  async importDefinitions(payload: AgentDefinitionsImportV1): Promise<AgentDefinitionsImportResponse> {
+    return this.request<AgentDefinitionsImportResponse>('/import-export/import', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async downloadSqliteBackup(): Promise<{ blob: Blob; filename: string }> {
+    const response = await this.requestRaw('/import-export/sqlite', { method: 'GET' })
+    const blob = await response.blob()
+
+    const contentDisposition = response.headers.get('content-disposition') ?? ''
+    const filenameMatch = contentDisposition.match(/filename=\"?([^\";]+)\"?/i)
+    const filename = filenameMatch?.[1] ?? 'octoporty-agent-backup.db'
+
+    return { blob, filename }
   }
 }
 

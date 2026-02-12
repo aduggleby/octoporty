@@ -34,11 +34,34 @@ builder.Configuration
     .AddEnvironmentVariables();
 
 // Ensure the Agent always logs to a rolling file by default.
-// This path is required for the Agent Logs UI (SignalR streaming + history endpoint).
-const string DefaultAgentLogFilePath = "/var/log/octoporty/agent-.log";
-if (string.IsNullOrWhiteSpace(builder.Configuration["Logging:FilePath"]))
+// In containers/production we want /var/log; for local dev (including E2E tests) we must use a writable directory.
+var runningInContainer = string.Equals(
+    Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+    "true",
+    StringComparison.OrdinalIgnoreCase);
+
+// SlimBuilder environments can be driven by either ASPNETCORE_ENVIRONMENT or DOTNET_ENVIRONMENT.
+var envName =
+    Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
+    Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ??
+    builder.Environment.EnvironmentName;
+
+var isProduction = string.Equals(envName, "Production", StringComparison.OrdinalIgnoreCase);
+var isDevelopment = string.Equals(envName, "Development", StringComparison.OrdinalIgnoreCase);
+
+var defaultAgentLogFilePath = runningInContainer || isProduction
+    ? "/var/log/octoporty/agent-.log"
+    : Path.Combine(AppContext.BaseDirectory, "logs", "agent-.log");
+
+// In Development, override the repo default (which points at /var/log) to a local writable path.
+// This keeps `dotnet run` and Playwright E2E tests working without root.
+if (!runningInContainer && isDevelopment)
 {
-    builder.Configuration["Logging:FilePath"] = DefaultAgentLogFilePath;
+    builder.Configuration["Logging:FilePath"] = defaultAgentLogFilePath;
+}
+else if (string.IsNullOrWhiteSpace(builder.Configuration["Logging:FilePath"]))
+{
+    builder.Configuration["Logging:FilePath"] = defaultAgentLogFilePath;
 }
 
 builder.Host.UseOctoportySerilog("Octoporty.Agent");
@@ -55,10 +78,10 @@ if (!string.IsNullOrWhiteSpace(agentLogPath))
     var logDir = Path.GetDirectoryName(agentLogPath);
     if (!string.IsNullOrWhiteSpace(logDir))
     {
+        // In production/container environments, fail fast if logs can't be written.
+        // In development, we always point at a local path above, so this should succeed.
         if (!Directory.Exists(logDir))
-        {
             Directory.CreateDirectory(logDir);
-        }
 
         var testFile = Path.Combine(logDir, $".write-test-{Guid.NewGuid()}");
         try
@@ -71,7 +94,7 @@ if (!string.IsNullOrWhiteSpace(agentLogPath))
             throw new InvalidOperationException(
                 $"Log directory '{logDir}' is not writable. " +
                 $"The Agent requires this to write rolling logs and to stream them to the web UI. " +
-                $"Ensure the container user has write access (see startup banner UID/GID). " +
+                $"Ensure the directory is writable by the container user (see startup banner UID/GID). " +
                 $"Error: {ex.Message}");
         }
     }

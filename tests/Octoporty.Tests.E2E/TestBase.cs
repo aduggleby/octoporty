@@ -69,6 +69,9 @@ public class TestBase : PageTest
                 Environment =
                 {
                     ["ASPNETCORE_ENVIRONMENT"] = "Development"
+                    // Use an isolated SQLite DB per test run to avoid mutating any repo-checked-in dev DB.
+                    // This also prevents cross-test flakiness due to persisted mappings.
+                    ,["ConnectionStrings__DefaultConnection"] = $"Data Source={Path.Combine(Path.GetTempPath(), $"octoporty-e2e-{Guid.NewGuid():N}.db")}"
                 }
             }
         };

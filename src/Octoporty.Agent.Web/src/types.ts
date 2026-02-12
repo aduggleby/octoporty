@@ -187,3 +187,39 @@ export interface LandingPageResponse {
 export interface UpdateLandingPageResponse {
   hash: string
 }
+
+// Import/Export types
+export interface AgentDefinitionsExportV1 {
+  schemaVersion: string
+  exportedAtUtc: string
+  mappings: PortMappingDefinitionV1[]
+  landingPageHtml?: string | null
+  landingPageIsDefault: boolean
+}
+
+export interface PortMappingDefinitionV1 {
+  id?: string | null
+  externalDomain: string
+  internalHost: string
+  internalPort: number
+  internalUseTls: boolean
+  allowSelfSignedCerts: boolean
+  isEnabled: boolean
+  description?: string | null
+}
+
+export interface AgentDefinitionsImportV1 {
+  schemaVersion: string
+  mappings: PortMappingDefinitionV1[]
+  landingPageHtml?: string | null
+  landingPageIsDefault?: boolean | null
+}
+
+export interface AgentDefinitionsImportResponse {
+  success: boolean
+  error?: string
+  created: number
+  updated: number
+  skipped: number
+  errors: string[]
+}

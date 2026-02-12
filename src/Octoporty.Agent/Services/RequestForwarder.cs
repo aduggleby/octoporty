@@ -59,7 +59,7 @@ public class RequestForwarder
                 request.Method, request.Path, mapping.InternalHost, mapping.InternalPort,
                 (int)httpResponse.StatusCode, duration.TotalMilliseconds);
 
-            return await CreateResponseMessageAsync(request.RequestId, httpResponse, ct);
+            return await CreateResponseMessageAsync(request.RequestId, httpResponse, mapping, ct);
         }
         catch (HttpRequestException ex)
         {
@@ -127,6 +127,7 @@ public class RequestForwarder
     private async Task<ResponseMessage> CreateResponseMessageAsync(
         string requestId,
         HttpResponseMessage httpResponse,
+        PortMapping mapping,
         CancellationToken ct)
     {
         var headers = new Dictionary<string, string[]>();
@@ -146,6 +147,8 @@ public class RequestForwarder
                     requestId, string.Join(", ", values));
             }
         }
+
+        RewriteRedirectHeaders(headers, mapping, requestId);
 
         var body = await httpResponse.Content.ReadAsByteArrayAsync(ct);
 
@@ -239,6 +242,8 @@ public class RequestForwarder
                         request.RequestId, string.Join(", ", values));
                 }
             }
+
+            RewriteRedirectHeaders(headers, mapping, request.RequestId);
 
             if (!headers.ContainsKey("Content-Type"))
             {
@@ -375,6 +380,100 @@ public class RequestForwarder
         }
 
         return $"Bad Gateway: {ex.Message} (inner: {hint})";
+    }
+
+    private void RewriteRedirectHeaders(Dictionary<string, string[]> headers, PortMapping mapping, string requestId)
+    {
+        if (!headers.TryGetValue("Location", out var locations) || locations.Length == 0)
+            return;
+
+        var rewritten = false;
+        var newLocations = new string[locations.Length];
+
+        for (var i = 0; i < locations.Length; i++)
+        {
+            var original = locations[i];
+            if (TryRewriteLocationHeader(original, mapping, out var updated))
+            {
+                rewritten = true;
+                newLocations[i] = updated;
+                _logger.LogInformation(
+                    "Rewrote redirect Location for requestId={RequestId} external={ExternalDomain} from '{Original}' to '{Updated}'",
+                    requestId,
+                    mapping.ExternalDomain,
+                    TruncateForLog(original, 300),
+                    TruncateForLog(updated, 300));
+            }
+            else
+            {
+                newLocations[i] = original;
+            }
+        }
+
+        if (rewritten)
+            headers["Location"] = newLocations;
+    }
+
+    private static bool TryRewriteLocationHeader(string? location, PortMapping mapping, out string rewritten)
+    {
+        rewritten = location ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(location))
+            return false;
+
+        // Relative redirects are already correct: the browser will keep the external FQDN and https scheme.
+        // (The Gateway terminates TLS, so clients should always see https.)
+        if (location.StartsWith("/", StringComparison.Ordinal))
+            return false;
+
+        Uri? uri;
+
+        // Handle scheme-relative redirects: //host/path
+        if (location.StartsWith("//", StringComparison.Ordinal))
+        {
+            if (!Uri.TryCreate("http:" + location, UriKind.Absolute, out uri))
+                return false;
+        }
+        else
+        {
+            if (!Uri.TryCreate(location, UriKind.Absolute, out uri))
+                return false;
+        }
+
+        var host = NormalizeHost(uri.Host);
+        var internalHost = NormalizeHost(mapping.InternalHost);
+        var externalHost = NormalizeHost(mapping.ExternalDomain);
+
+        // Only rewrite redirects that point back to the internal host (or already to the external host but wrong scheme).
+        if (!string.Equals(host, internalHost, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(host, externalHost, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var builder = new UriBuilder(uri)
+        {
+            Scheme = "https",
+            Host = mapping.ExternalDomain,
+            // Use default https port for the external URL.
+            Port = -1
+        };
+
+        rewritten = builder.Uri.ToString();
+        return !string.Equals(location, rewritten, StringComparison.Ordinal);
+    }
+
+    private static string NormalizeHost(string host)
+    {
+        // Uri.Host for IPv6 is already sans brackets; normalize anyway.
+        return host.Trim().TrimEnd('.').TrimStart('[').TrimEnd(']');
+    }
+
+    private static string TruncateForLog(string? value, int maxLen)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length <= maxLen)
+            return value ?? string.Empty;
+        return value[..maxLen] + "...";
     }
 }
 
